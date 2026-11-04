@@ -35,7 +35,17 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
     })();
     return () => {
       cancelled = true;
-      scanner?.stop().then(() => scanner?.clear()).catch(() => {});
+      const s = scanner as (typeof scanner & { isScanning?: boolean }) | null;
+      if (!s) return;
+      try {
+        if (s.isScanning) {
+          s.stop().then(() => s.clear()).catch(() => {});
+        } else {
+          s.clear();
+        }
+      } catch {
+        // scanner already stopped or never started
+      }
     };
   }, [open, onDetected]);
 
