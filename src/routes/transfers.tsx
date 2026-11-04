@@ -35,7 +35,7 @@ function TransfersPage() {
     setBusy(true);
     const { error } = await supabase.rpc("transfer_stock", { _product: product, _from: from, _to: to, _qty: Number(amount) });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("تم التحويل");
     setAmount("");
   }

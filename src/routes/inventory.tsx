@@ -119,7 +119,7 @@ function ProductDialog({ open, onOpenChange, barcode }: { open: boolean; onOpenC
       reorder_qty: Number(f.get("reorder_qty") || 0),
     });
     setBusy(false);
-    if (error) return toast.error(error.code === "23505" ? "الباركود مستخدم لصنف آخر" : error.message);
+    if (error) { toast.error(error.code === "23505" ? "الباركود مستخدم لصنف آخر" : error.message); return; }
     toast.success("تمت إضافة الصنف");
     onOpenChange(false);
   }

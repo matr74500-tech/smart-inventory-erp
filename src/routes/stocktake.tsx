@@ -39,7 +39,7 @@ function StocktakePage() {
     setSaving(productId);
     const { error } = await supabase.rpc("set_stock", { _product: productId, _warehouse: warehouse, _qty: Number(v), _kind: kind });
     setSaving(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setDrafts((d) => { const n = { ...d }; delete n[productId]; return n; });
     toast.success("تم تحديث الكمية");
   }

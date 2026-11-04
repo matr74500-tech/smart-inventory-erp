@@ -29,7 +29,7 @@ function ReordersPage() {
     setBusy(id);
     const { error } = await supabase.rpc("receive_reorder", { _id: id });
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("تم استلام التوريد وإضافته للمخزون");
   }
 
