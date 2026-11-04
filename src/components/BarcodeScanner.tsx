@@ -29,6 +29,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
           },
           () => {},
         );
+        if (cancelled && s.isScanning) s.stop().then(() => s.clear()).catch(() => {});
       } catch {
         setError("تعذر تشغيل الكاميرا. تأكد من منح إذن الكاميرا.");
       }
