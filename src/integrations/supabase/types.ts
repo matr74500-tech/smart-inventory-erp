@@ -14,41 +14,173 @@ export type Database = {
   }
   public: {
     Tables: {
-      products: {
+      app_settings: {
         Row: {
-          barcode: string | null
-          created_at: string
-          id: string
-          name: string
-          price: number
-          reorder_level: number
-          reorder_qty: number
-          unit: string
+          id: number
+          phone: string | null
+          shop_name: string
           updated_at: string
         }
         Insert: {
-          barcode?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          price?: number
-          reorder_level?: number
-          reorder_qty?: number
-          unit?: string
+          id?: number
+          phone?: string | null
+          shop_name?: string
           updated_at?: string
         }
         Update: {
-          barcode?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          price?: number
-          reorder_level?: number
-          reorder_qty?: number
-          unit?: string
+          id?: number
+          phone?: string | null
+          shop_name?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          next_seq: number
+          prefix: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          next_seq?: number
+          prefix?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          next_seq?: number
+          prefix?: string
+        }
+        Relationships: []
+      }
+      custom_fields: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          options: string[]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          options?: string[]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          options?: string[]
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          attributes: Json
+          barcode: string | null
+          category_id: string | null
+          code: string | null
+          cost: number
+          created_at: string
+          custom_barcode: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          major_unit: string | null
+          model_no: string | null
+          name: string
+          pack_capacity: number
+          price: number
+          price_bulk: number
+          price_half: number
+          price_special: number
+          price_wholesale: number
+          reorder_level: number
+          reorder_qty: number
+          shelf: string | null
+          unit: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          attributes?: Json
+          barcode?: string | null
+          category_id?: string | null
+          code?: string | null
+          cost?: number
+          created_at?: string
+          custom_barcode?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          major_unit?: string | null
+          model_no?: string | null
+          name: string
+          pack_capacity?: number
+          price?: number
+          price_bulk?: number
+          price_half?: number
+          price_special?: number
+          price_wholesale?: number
+          reorder_level?: number
+          reorder_qty?: number
+          shelf?: string | null
+          unit?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          attributes?: Json
+          barcode?: string | null
+          category_id?: string | null
+          code?: string | null
+          cost?: number
+          created_at?: string
+          custom_barcode?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          major_unit?: string | null
+          model_no?: string | null
+          name?: string
+          pack_capacity?: number
+          price?: number
+          price_bulk?: number
+          price_half?: number
+          price_special?: number
+          price_wholesale?: number
+          reorder_level?: number
+          reorder_qty?: number
+          shelf?: string | null
+          unit?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -70,6 +202,83 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      purchase_invoices: {
+        Row: {
+          created_at: string
+          id: string
+          number: number
+          supplier: string | null
+          total: number
+          user_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          number?: number
+          supplier?: string | null
+          total?: number
+          user_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          number?: number
+          supplier?: string | null
+          total?: number
+          user_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_invoices_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_items: {
+        Row: {
+          cost: number
+          id: string
+          invoice_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          cost?: number
+          id?: string
+          invoice_id: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          cost?: number
+          id?: string
+          invoice_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reorder_requests: {
         Row: {
@@ -200,6 +409,27 @@ export type Database = {
           },
         ]
       }
+      units: {
+        Row: {
+          created_at: string
+          factor: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          factor?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          factor?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -242,12 +472,17 @@ export type Database = {
     }
     Functions: {
       can_manage_stock: { Args: { _user_id: string }; Returns: boolean }
+      ean13: { Args: { _d12: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      post_purchase: {
+        Args: { _items: Json; _supplier: string; _warehouse: string }
+        Returns: string
       }
       receive_reorder: { Args: { _id: string }; Returns: undefined }
       set_stock: {
