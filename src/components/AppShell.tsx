@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -19,7 +19,6 @@ import {
   Search,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { useState } from "react";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
