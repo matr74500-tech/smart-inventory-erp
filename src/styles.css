@@ -108,3 +108,21 @@
 @utility shadow-card {
   box-shadow: var(--shadow-card);
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-area {
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .label-cell {
+    break-inside: avoid;
+  }
+}

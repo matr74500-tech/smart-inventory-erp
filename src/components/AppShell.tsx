@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -10,21 +10,36 @@ import {
   LogOut,
   Loader2,
   ShieldAlert,
+  ShoppingCart,
+  BadgeDollarSign,
+  Tags,
+  FileText,
+  Bell,
+  Settings,
+  Search,
 } from "lucide-react";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
   { to: "/", label: "الرئيسية", icon: LayoutDashboard },
-  { to: "/inventory", label: "المخزون والبحث", icon: Boxes },
+  { to: "/inventory", label: "الأصناف والمخزون", icon: Boxes },
+  { to: "/purchases", label: "فاتورة مشتريات", icon: ShoppingCart, roles: ["storekeeper"] },
+  { to: "/prices", label: "تحديث الأسعار", icon: BadgeDollarSign, roles: ["storekeeper"] },
+  { to: "/alerts", label: "تنبيهات المخزون", icon: Bell },
+  { to: "/labels", label: "ملصقات الباركود", icon: Tags },
+  { to: "/catalog", label: "كتالوج PDF", icon: FileText },
   { to: "/stocktake", label: "الجرد والإدخال", icon: ClipboardCheck, roles: ["storekeeper"] },
   { to: "/transfers", label: "التحويلات", icon: ArrowLeftRight, roles: ["storekeeper"] },
   { to: "/reorders", label: "التوريد", icon: Truck, roles: ["storekeeper"] },
+  { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
 ];
 
 export function AppShell({ title, roles, children }: { title: string; roles?: Role[]; children: ReactNode }) {
   const { session, loading, username, roles: myRoles, can, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login" });
@@ -41,8 +56,8 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
   const allowed = !roles || can(...roles);
 
   return (
-    <div dir="rtl" className="min-h-screen md:flex">
-      <aside className="bg-sidebar text-sidebar-foreground md:w-64 md:min-h-screen md:sticky md:top-0 flex md:flex-col">
+    <div dir="rtl" className="min-h-screen md:flex print:block">
+      <aside className="no-print bg-sidebar text-sidebar-foreground md:w-64 md:min-h-screen md:sticky md:top-0 flex md:flex-col">
         <div className="hidden md:block p-5 border-b border-sidebar-border">
           <div className="font-display text-xl font-bold">سهيل سوفت</div>
           <div className="text-xs opacity-70">نقاط البيع وإدارة المخزون</div>
@@ -75,8 +90,17 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
           </button>
         </div>
       </aside>
-      <main className="flex-1 p-4 md:p-8 max-w-6xl">
-        <h1 className="text-2xl md:text-3xl font-bold mb-6">{title}</h1>
+      <main className="flex-1 min-w-0 p-4 md:p-8 max-w-7xl print:p-0 print:max-w-none">
+        <div className="no-print flex items-center gap-3 mb-6">
+          <h1 className="flex-1 text-2xl md:text-3xl font-bold">{title}</h1>
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
+          >
+            <Search className="size-4" /> <span className="hidden sm:inline">بحث سريع عن صنف</span>
+          </button>
+        </div>
+        {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
         {allowed ? (
           children
         ) : (
