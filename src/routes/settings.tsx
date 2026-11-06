@@ -81,15 +81,15 @@ function ListEditor({ table, rows, cols, hint }: { table: Table; rows: AnyRow[];
 
   async function add(e: FormEvent) {
     e.preventDefault();
-    if (!draft[cols[0].key]?.trim()) return;
+    if (!draft[cols[0]?.key ?? ""]?.trim()) return;
     const { error } = await supabase.from(table).insert(payload(draft) as never);
-    if (error) return toast.error(error.code === "23505" ? "الاسم موجود مسبقاً" : error.message);
+    if (error) { toast.error(error.code === "23505" ? "الاسم موجود مسبقاً" : error.message); return; }
     setDraft(empty);
     toast.success("تمت الإضافة");
   }
   async function save(id: string) {
     const { error } = await supabase.from(table).update(payload(edit) as never).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setEditing(null);
   }
   async function remove(id: string) {

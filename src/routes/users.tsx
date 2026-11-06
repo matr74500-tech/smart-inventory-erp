@@ -66,7 +66,7 @@ function UsersPage() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const roles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => f.get(`role_${r}`));
-    if (!roles.length) return toast.error("اختر صلاحية واحدة على الأقل");
+    if (!roles.length) { toast.error("اختر صلاحية واحدة على الأقل"); return; }
     try {
       await create({ data: { username: String(f.get("username")), password: String(f.get("password")), fullName: String(f.get("full_name") || ""), roles } });
       toast.success("تم إنشاء المستخدم");

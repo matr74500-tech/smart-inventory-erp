@@ -17,8 +17,8 @@ const NONE = "__none";
 type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  product?: Product | null;
-  barcode?: string;
+  product?: Product | null | undefined;
+  barcode?: string | undefined;
   categories: Category[];
   warehouses: Warehouse[];
   units: Unit[];
