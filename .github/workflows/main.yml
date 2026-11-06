@@ -28,13 +28,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Ensure Capacitor Packages
+      - name: Ensure Capacitor Packages & Android
         run: |
           bun add -D @capacitor/cli @capacitor/core @capacitor/android
-
-      - name: Add and Sync Android Platform
-        run: |
           if [ ! -d "android" ]; then
+            npx cap init "Suhail Inventory" "com.suhail.inventory" --web-dir dist || true
             npx cap add android
           fi
           npx cap sync android
@@ -50,4 +48,3 @@ jobs:
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
-
