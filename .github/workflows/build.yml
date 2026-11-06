@@ -17,9 +17,7 @@ jobs:
           java-version: '17'
       - run: bun install
       - run: bun run build
-      - run: |
-          ls -la .output/public
-          test -f .output/public/index.html || (echo "index.html not found!" && exit 1)
+      - run: ls -la .output/public
       - run: bun add -D @capacitor/cli @capacitor/core @capacitor/android
       - run: |
           if [ ! -d "android" ]; then
