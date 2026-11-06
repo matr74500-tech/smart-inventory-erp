@@ -79,3 +79,19 @@ export const num = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 export const str = (v: unknown) => String(v ?? "").trim();
+
+export type ExpiryStatus = "expired" | "soon" | "ok" | "none";
+/** Expiry colour rule: expired = red, within 30 days = orange, otherwise green. */
+export function expiryStatus(date: string | null | undefined, now = new Date()): ExpiryStatus {
+  if (!date) return "none";
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const [y, m, d] = date.split("-").map(Number);
+  const days = Math.round((new Date(y!, m! - 1, d!).getTime() - today) / 864e5);
+  return days < 0 ? "expired" : days <= 30 ? "soon" : "ok";
+}
+
+/** Stocktake difference: positive = surplus, negative = shortage. */
+export function countDiff(book: number, actual: number) {
+  const diff = actual - book;
+  return { diff, label: diff > 0 ? "زيادة" : diff < 0 ? "نقص" : "مطابق" } as const;
+}

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, Plus, Loader2, Pencil, Upload, Download, FileText, Tags, Package } from "lucide-react";
 import { toast } from "sonner";
+import { ExpiryBadge } from "@/components/ExpiryBadge";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ProductDialog } from "@/components/ProductDialog";
@@ -180,6 +181,7 @@ function InventoryPage() {
                         {p.image_url ? <img src={p.image_url} alt="" className="size-11 rounded-md object-cover" /> : <div className="size-11 rounded-md bg-muted grid place-items-center"><Package className="size-5 text-muted-foreground" /></div>}
                         <div>
                           <div className="font-medium">{p.name}</div>
+                          <ExpiryBadge date={p.expiry_date} />
                           <div className="text-xs text-muted-foreground">{p.unit}{p.major_unit ? ` · ${p.major_unit} (${Number(p.pack_capacity)})` : ""}{p.model_no ? ` · ${p.model_no}` : ""}</div>
                         </div>
                       </div>

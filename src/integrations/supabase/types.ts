@@ -35,6 +35,30 @@ export type Database = {
         }
         Relationships: []
       }
+      backups: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          size_bytes: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          size_bytes?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          size_bytes?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -93,6 +117,7 @@ export type Database = {
           created_at: string
           custom_barcode: string | null
           description: string | null
+          expiry_date: string | null
           id: string
           image_url: string | null
           major_unit: string | null
@@ -120,6 +145,7 @@ export type Database = {
           created_at?: string
           custom_barcode?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
           image_url?: string | null
           major_unit?: string | null
@@ -147,6 +173,7 @@ export type Database = {
           created_at?: string
           custom_barcode?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
           image_url?: string | null
           major_unit?: string | null
@@ -354,6 +381,39 @@ export type Database = {
           },
           {
             foreignKeyName: "stock_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_minimums: {
+        Row: {
+          min_qty: number
+          product_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          min_qty?: number
+          product_id: string
+          warehouse_id: string
+        }
+        Update: {
+          min_qty?: number
+          product_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_minimums_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_minimums_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"

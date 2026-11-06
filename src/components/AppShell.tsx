@@ -17,8 +17,10 @@ import {
   Bell,
   Settings,
   Search,
+  DatabaseBackup,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { LowStockWatcher } from "@/components/LowStockWatcher";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
@@ -33,6 +35,7 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/transfers", label: "التحويلات", icon: ArrowLeftRight, roles: ["storekeeper"] },
   { to: "/reorders", label: "التوريد", icon: Truck, roles: ["storekeeper"] },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
+  { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
 ];
 
@@ -100,6 +103,7 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
             <Search className="size-4" /> <span className="hidden sm:inline">بحث سريع عن صنف</span>
           </button>
         </div>
+        <LowStockWatcher />
         {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
         {allowed ? (
           children

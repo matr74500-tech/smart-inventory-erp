@@ -10,8 +10,9 @@ export type Category = Tables<"categories">;
 export type Unit = Tables<"units">;
 export type CustomField = Tables<"custom_fields">;
 export type Settings = Tables<"app_settings">;
+export type StockMin = Tables<"stock_minimums">;
 
-const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings"];
+const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums"];
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
@@ -23,10 +24,11 @@ export function useInventory() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [fields, setFields] = useState<CustomField[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [minimums, setMinimums] = useState<StockMin[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [p, w, s, r, c, u, f, st] = await Promise.all([
+    const [p, w, s, r, c, u, f, st, mn] = await Promise.all([
       supabase.from("products").select("*").order("name"),
       supabase.from("warehouses").select("*").order("created_at"),
       supabase.from("stock").select("*"),
@@ -35,6 +37,7 @@ export function useInventory() {
       supabase.from("units").select("*").order("created_at"),
       supabase.from("custom_fields").select("*").order("created_at"),
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+      supabase.from("stock_minimums").select("*"),
     ]);
     setProducts(p.data ?? []);
     setWarehouses(w.data ?? []);
@@ -44,6 +47,7 @@ export function useInventory() {
     setUnits(u.data ?? []);
     setFields(f.data ?? []);
     setSettings(st.data ?? null);
+    setMinimums(mn.data ?? []);
     setLoading(false);
   }, []);
 
@@ -76,5 +80,5 @@ export function useInventory() {
 
   const categoryName = useCallback((id: string | null) => categories.find((c) => c.id === id)?.name ?? "", [categories]);
 
-  return { products, warehouses, stock, reorders, categories, units, fields, settings, loading, qty, categoryName, reload: load };
+  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, loading, qty, categoryName, reload: load };
 }
