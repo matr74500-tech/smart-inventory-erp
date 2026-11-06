@@ -15,6 +15,13 @@
       "when": 1793839378344,
       "tag": "0001_inventory_schema_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793974231954,
+      "tag": "0002_expiry_minimums_backups",
+      "breakpoints": true
     }
   ]
 }
