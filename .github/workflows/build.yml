@@ -1,33 +1,30 @@
 name: Build APK
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [main]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
       - run: bun install
       - run: bun run build
-      - run: ls -la .output/public
+      - run: ls -la .output/public || echo "no public"
       - run: bun add -D @capacitor/cli @capacitor/core @capacitor/android
       - run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          rm -rf android
+          npx cap add android
           npx cap sync android
+          ls -la android/gradlew
       - run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug
