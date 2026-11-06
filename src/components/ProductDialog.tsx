@@ -71,6 +71,7 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       price: n("price"), price_special: n("price_special"), price_half: n("price_half"),
       price_wholesale: n("price_wholesale"), price_bulk: n("price_bulk"),
       reorder_level: n("reorder_level"), reorder_qty: n("reorder_qty"),
+      expiry_date: String(f.get("expiry_date") || "") || null,
       image_url: image,
       attributes: attrs,
     };
@@ -126,6 +127,7 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       </div>
       <div className="space-y-1"><Label>حد الطلب (تنبيه النفاد)</Label><Input name="reorder_level" type="number" min="0" defaultValue={p?.reorder_level ?? ""} /></div>
       <div className="space-y-1"><Label>كمية إعادة التوريد</Label><Input name="reorder_qty" type="number" min="0" defaultValue={p?.reorder_qty ?? ""} /></div>
+      <div className="space-y-1"><Label>تاريخ الانتهاء (اختياري)</Label><Input name="expiry_date" type="date" dir="ltr" defaultValue={p?.expiry_date ?? ""} /></div>
       {fields.map((fd) => (
         <div key={fd.id} className="space-y-1">
           <Label>{fd.name}</Label>
