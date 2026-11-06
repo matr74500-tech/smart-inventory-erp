@@ -3,9 +3,9 @@ import { adjustPrice, ean13, isValidEan13, toBaseQty } from "./inventory-utils";
 
 describe("inventory rules", () => {
   it("generated barcodes start with 628 and carry a valid EAN-13 check digit", () => {
-    expect(ean13("628000000001")).toBe("6280000000014");
-    expect(isValidEan13("6280000000014")).toBe(true);
-    expect(isValidEan13("6280000000015")).toBe(false);
+    expect(ean13("628000000001")).toBe("6280000000017");
+    expect(isValidEan13("6280000000017")).toBe(true);
+    expect(isValidEan13("6280000000014")).toBe(false);
   });
   it("major unit quantity multiplies by package capacity", () => {
     expect(toBaseQty(3, "major", 12)).toBe(36);

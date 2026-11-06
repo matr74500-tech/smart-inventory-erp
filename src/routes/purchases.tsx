@@ -49,7 +49,7 @@ function PurchasesPage() {
   function addProduct(p: Product, qty = 1, cost?: number, price = "", wholesale = "") {
     setLines((ls) => {
       const i = ls.findIndex((l) => l.product.id === p.id);
-      if (i >= 0) { const n = [...ls]; n[i] = { ...n[i], qty: n[i].qty + qty }; return n; }
+      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + qty } : l));
       return [...ls, { product: p, qty, unit: "base", cost: cost ?? Number(p.cost), price, wholesale }];
     });
     setQ("");
@@ -95,7 +95,7 @@ function PurchasesPage() {
     }));
     const { error } = await supabase.rpc("post_purchase", { _supplier: supplier || "", _warehouse: warehouse, _items: items });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("تم ترحيل الفاتورة وتحديث الكميات والأسعار");
     setLines([]); setSupplier(""); loadHistory();
   }

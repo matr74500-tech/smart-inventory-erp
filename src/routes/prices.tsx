@@ -63,7 +63,7 @@ function PricesPage() {
     const results = await Promise.all(ids.map((id) => supabase.from("products").update({ ...drafts[id], updated_at: new Date().toISOString() }).eq("id", id)));
     setSaving(false);
     const failed = results.filter((r) => r.error);
-    if (failed.length) toast.error(failed[0].error!.message);
+    if (failed.length) toast.error(failed[0]?.error?.message ?? "خطأ");
     else { toast.success(`تم تحديث أسعار ${ids.length} صنف في كل المستودعات`); setDrafts({}); }
   }
 

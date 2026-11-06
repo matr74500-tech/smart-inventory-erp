@@ -61,7 +61,8 @@ export function fileToDataUrl(file: File, max = 400): Promise<string> {
 export async function readSheet(file: File): Promise<Record<string, unknown>[]> {
   const XLSX = await import("xlsx");
   const wb = XLSX.read(await file.arrayBuffer());
-  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+  const sheet = wb.Sheets[wb.SheetNames[0] ?? ""];
+  return sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "" }) : [];
 }
 
 export async function writeSheet(rows: Record<string, unknown>[], filename: string) {
