@@ -143,6 +143,14 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       <div className="space-y-1"><Label>حد الطلب (تنبيه النفاد)</Label><Input name="reorder_level" type="number" min="0" defaultValue={p?.reorder_level ?? ""} /></div>
       <div className="space-y-1"><Label>كمية إعادة التوريد</Label><Input name="reorder_qty" type="number" min="0" defaultValue={p?.reorder_qty ?? ""} /></div>
       <div className="space-y-1"><Label>تاريخ الانتهاء (اختياري)</Label><Input name="expiry_date" type="date" dir="ltr" defaultValue={p?.expiry_date ?? ""} /></div>
+      <div className="space-y-1"><Label>المورد</Label><Input name="supplier" placeholder="اسم المورد أو الشركة" defaultValue={p?.supplier ?? ""} /></div>
+      {!p && (
+        <div className="space-y-1">
+          <Label>الكمية الافتتاحية</Label>
+          <Input name="init_qty" type="number" min="0" step="any" placeholder="0" />
+          <p className="text-xs text-muted-foreground">تُسجل في المستودع الافتراضي المختار أعلاه كرصيد افتتاحي.</p>
+        </div>
+      )}
       {fields.map((fd) => (
         <div key={fd.id} className="space-y-1">
           <Label>{fd.name}</Label>
