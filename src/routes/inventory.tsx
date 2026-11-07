@@ -72,6 +72,7 @@ function InventoryPage() {
       filtered.map((p) => ({
         "الكود": p.code, "الاسم": p.name, "الوصف": p.description ?? "", "الموديل": p.model_no ?? "",
         "الباركود": p.barcode ?? "", "الباركود الخاص": p.custom_barcode ?? "", "الفئة": categoryName(p.category_id),
+        "المورد": p.supplier ?? "",
         "الرف": p.shelf ?? "", "الوحدة": p.unit, "الوحدة الكبرى": p.major_unit ?? "", "سعة العبوة": p.pack_capacity,
         "التكلفة": p.cost, ...Object.fromEntries(PRICE_TIERS.map((t) => [t.label, p[t.key]])),
         ...Object.fromEntries(warehouses.map((w) => [w.name, qty(p.id, w.id)])), "الإجمالي": qty(p.id),
@@ -101,6 +102,7 @@ function InventoryPage() {
           major_unit: str(r["الوحدة الكبرى"]) || null,
           pack_capacity: num(r["سعة العبوة"]) || 1,
           cost: num(r["التكلفة"]),
+          supplier: str(r["المورد"]) || null,
           ...Object.fromEntries(PRICE_TIERS.map((t) => [t.key, num(r[t.label])])),
         };
         const existing = products.find((p) => (row.barcode && p.barcode === row.barcode) || (str(r["الكود"]) && p.code === str(r["الكود"])));
@@ -204,7 +206,7 @@ function InventoryPage() {
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">أعمدة ملف الاستيراد: الاسم، الكود، الباركود، الوصف، الموديل، الفئة، الرف، الوحدة، الوحدة الكبرى، سعة العبوة، التكلفة، {PRICE_TIERS.map((t) => t.label).join("، ")}.</p>
+      <p className="mt-3 text-xs text-muted-foreground">أعمدة ملف الاستيراد: الاسم، الكود، الباركود، الوصف، الموديل، الفئة، الرف، الوحدة، الوحدة الكبرى، سعة العبوة، التكلفة، المورد، {PRICE_TIERS.map((t) => t.label).join("، ")}.</p>
       <ProductDialog
         open={dialog.open}
         onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}

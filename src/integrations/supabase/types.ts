@@ -132,6 +132,7 @@ export type Database = {
           reorder_level: number
           reorder_qty: number
           shelf: string | null
+          supplier: string | null
           unit: string
           updated_at: string
           warehouse_id: string | null
@@ -160,6 +161,7 @@ export type Database = {
           reorder_level?: number
           reorder_qty?: number
           shelf?: string | null
+          supplier?: string | null
           unit?: string
           updated_at?: string
           warehouse_id?: string | null
@@ -188,6 +190,7 @@ export type Database = {
           reorder_level?: number
           reorder_qty?: number
           shelf?: string | null
+          supplier?: string | null
           unit?: string
           updated_at?: string
           warehouse_id?: string | null
