@@ -72,16 +72,31 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       price_wholesale: n("price_wholesale"), price_bulk: n("price_bulk"),
       reorder_level: n("reorder_level"), reorder_qty: n("reorder_qty"),
       expiry_date: String(f.get("expiry_date") || "") || null,
+      supplier: String(f.get("supplier") || "") || null,
       image_url: image,
       attributes: attrs,
     };
+    const initQty = n("init_qty");
     setBusy(true);
-    const { error } = p
-      ? await supabase.from("products").update(row).eq("id", p.id)
-      : await supabase.from("products").insert(row);
-    setBusy(false);
-    if (error) { toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message); return; }
-    toast.success(p ? "تم حفظ التعديلات" : "تمت إضافة الصنف");
+    if (p) {
+      const { error } = await supabase.from("products").update(row).eq("id", p.id);
+      setBusy(false);
+      if (error) { toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message); return; }
+      toast.success("تم حفظ التعديلات");
+    } else {
+      const { data, error } = await supabase.from("products").insert(row).select("id").single();
+      if (error) {
+        setBusy(false);
+        toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message);
+        return;
+      }
+      if (initQty > 0 && warehouse !== NONE && data) {
+        const { error: stockErr } = await supabase.rpc("set_stock", { _product: data.id, _warehouse: warehouse, _qty: initQty, _kind: "رصيد افتتاحي" });
+        if (stockErr) toast.error(`أضيف الصنف لكن تعذر تسجيل الكمية: ${stockErr.message}`);
+      }
+      setBusy(false);
+      toast.success("تمت إضافة الصنف");
+    }
     onOpenChange(false);
   }
 
