@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useInventory } from "@/hooks/use-inventory";
+import { countDiff } from "@/lib/inventory-utils";
 import { matchesSearch } from "@/lib/arabic";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,18 @@ function StocktakePage() {
     toast.success("تم تحديث الكمية");
   }
 
+  const pending = Object.entries(drafts).filter(([, v]) => v !== "");
+  async function approveAll() {
+    if (!pending.length || !confirm(`اعتماد الجرد وتسوية ${pending.length} صنف؟`)) return;
+    setSaving("all");
+    for (const [pid, v] of pending) {
+      const { error } = await supabase.rpc("set_stock", { _product: pid, _warehouse: warehouse, _qty: Number(v), _kind: kind });
+      if (error) { toast.error(error.message); setSaving(null); return; }
+    }
+    setSaving(null); setDrafts({});
+    toast.success("تم اعتماد الجرد وتسوية الأرصدة");
+  }
+
   return (
     <AppShell title="الجرد والإدخال الأولي" roles={["storekeeper"]}>
       <div className="flex flex-wrap gap-2 mb-5">
@@ -63,13 +76,15 @@ function StocktakePage() {
           <Input className="pr-10 bg-card" placeholder="بحث…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <BarcodeScanner onDetected={setQ} />
+        <Button onClick={approveAll} disabled={!pending.length || saving === "all"}>{saving === "all" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} اعتماد الجرد ({pending.length})</Button>
       </div>
       <div className="rounded-xl bg-card shadow-card divide-y">
         {list.map((p) => (
           <div key={p.id} className="flex items-center gap-3 p-3">
             <div className="flex-1">
               <div className="font-medium">{p.name}</div>
-              <div className="text-xs text-muted-foreground">الكمية الحالية: {qty(p.id, warehouse)} {p.unit}</div>
+              <div className="text-xs text-muted-foreground">الرصيد الدفتري: {qty(p.id, warehouse)} {p.unit}</div>
+              {drafts[p.id] !== undefined && drafts[p.id] !== "" && (() => { const d = countDiff(qty(p.id, warehouse), Number(drafts[p.id])); return <div className={`text-xs font-semibold ${d.diff > 0 ? "text-success" : d.diff < 0 ? "text-destructive" : "text-muted-foreground"}`}>{d.label}{d.diff ? ` ${Math.abs(d.diff)}` : ""}</div>; })()}
             </div>
             <Input
               type="number" min="0" className="w-28" placeholder="الكمية الفعلية"
