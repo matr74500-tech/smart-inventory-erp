@@ -52,7 +52,7 @@ function BackupPage() {
       if (target === "device") download(data, fname(data.created_at));
       else {
         const { data: u } = await supabase.auth.getUser();
-        const { error } = await supabase.from("backups").insert({ data: data as never, user_id: u.user?.id, size_bytes: JSON.stringify(data).length });
+        const { error } = await supabase.from("backups").insert({ data: data as never, user_id: u.user?.id ?? null, size_bytes: JSON.stringify(data).length });
         if (error) throw error;
         load();
       }
