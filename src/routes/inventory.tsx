@@ -206,7 +206,7 @@ function InventoryPage() {
           </table>
         </div>
       )}
-      <p className="mt-3 text-xs text-muted-foreground">أعمدة ملف الاستيراد: الاسم، الكود، الباركود، الوصف، الموديل، الفئة، الرف، الوحدة، الوحدة الكبرى، سعة العبوة، التكلفة، {PRICE_TIERS.map((t) => t.label).join("، ")}.</p>
+      <p className="mt-3 text-xs text-muted-foreground">أعمدة ملف الاستيراد: الاسم، الكود، الباركود، الوصف، الموديل، الفئة، الرف، الوحدة، الوحدة الكبرى، سعة العبوة، التكلفة، المورد، {PRICE_TIERS.map((t) => t.label).join("، ")}.</p>
       <ProductDialog
         open={dialog.open}
         onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
