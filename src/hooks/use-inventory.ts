@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/lib/auth";
 
 export type Product = Tables<"products">;
 export type Warehouse = Tables<"warehouses">;
@@ -16,6 +17,7 @@ const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "cat
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
+  const { session, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [stock, setStock] = useState<StockRow[]>([]);
@@ -28,8 +30,9 @@ export function useInventory() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!session || authLoading) return;
     const [p, w, s, r, c, u, f, st, mn] = await Promise.all([
-      supabase.from("products").select("*").order("name"),
+      supabase.rpc("visible_products"),
       supabase.from("warehouses").select("*").order("created_at"),
       supabase.from("stock").select("*"),
       supabase.from("reorder_requests").select("*").order("created_at", { ascending: false }),
@@ -39,7 +42,7 @@ export function useInventory() {
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
       supabase.from("stock_minimums").select("*"),
     ]);
-    setProducts(p.data ?? []);
+    setProducts((p.data ?? []) as unknown as Product[]);
     setWarehouses(w.data ?? []);
     setStock(s.data ?? []);
     setReorders(r.data ?? []);
@@ -49,7 +52,7 @@ export function useInventory() {
     setSettings(st.data ?? null);
     setMinimums(mn.data ?? []);
     setLoading(false);
-  }, []);
+  }, [session?.user.id, authLoading]);
 
   useEffect(() => {
     load();

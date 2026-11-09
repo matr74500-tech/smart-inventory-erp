@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
+- Employee page/action/field permissions live in employee_permissions; products are read only through visible_products, and database policies/triggers/RPC checks enforce access independently of UI visibility.
 - Stock quantities change only through DB functions (set_stock, transfer_stock, receive_reorder) so every change is role-checked and logged in stock_movements.
 - Login uses username mapped to a synthetic email (src/lib/arabic.ts usernameToEmail); roles live in user_roles and the first account becomes admin.
 - Search normalizes Arabic letter forms client-side via normalizeArabic; inventory screens stay live through the realtime subscription in useInventory.

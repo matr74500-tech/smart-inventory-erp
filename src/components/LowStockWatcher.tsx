@@ -16,10 +16,11 @@ export function LowStockWatcher() {
         const q = Number(row.quantity ?? 0);
         if (!min || q >= min || (old?.quantity !== undefined && Number(old.quantity) < min)) return;
         const [{ data: p }, { data: w }] = await Promise.all([
-          supabase.from("products").select("name").eq("id", row.product_id).maybeSingle(),
+          supabase.rpc("visible_products"),
           supabase.from("warehouses").select("name").eq("id", row.warehouse_id).maybeSingle(),
         ]);
-        toast.warning(`رصيد "${p?.name ?? "صنف"}" في ${w?.name ?? "المستودع"} نزل عن الحد الأدنى`, { description: `الرصيد ${q} / الحد ${min}`, duration: 8000 });
+        const product = (p as unknown as { id: string; name?: string }[] | null)?.find(x => x.id === row.product_id);
+        toast.warning(`رصيد "${product?.name ?? "صنف"}" في ${w?.name ?? "المستودع"} نزل عن الحد الأدنى`, { description: `الرصيد ${q} / الحد ${min}`, duration: 8000 });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
