@@ -107,6 +107,30 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_permissions: {
+        Row: {
+          actions: string[]
+          fields: string[]
+          pages: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: string[]
+          fields?: string[]
+          pages?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: string[]
+          fields?: string[]
+          pages?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           attributes: Json
@@ -536,6 +560,10 @@ export type Database = {
     Functions: {
       can_manage_stock: { Args: { _user_id: string }; Returns: boolean }
       ean13: { Args: { _d12: string }; Returns: string }
+      employee_can: {
+        Args: { _key: string; _kind: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -561,6 +589,7 @@ export type Database = {
         Args: { _from: string; _product: string; _qty: number; _to: string }
         Returns: undefined
       }
+      visible_products: { Args: never; Returns: Json[] }
     }
     Enums: {
       app_role: "admin" | "storekeeper" | "cashier"
