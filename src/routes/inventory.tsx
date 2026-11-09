@@ -35,7 +35,7 @@ const ALL = "__all";
 function InventoryPage() {
   const inv = useInventory();
   const { products, warehouses, categories, qty, loading, categoryName } = inv;
-  const { can } = useAuth();
+  const { canAction, canField, canPage } = useAuth();
   const search = Route.useSearch();
   const [q, setQ] = useState(search.q ?? "");
   const [cat, setCat] = useState(ALL);
@@ -60,23 +60,26 @@ function InventoryPage() {
       setQ(code);
       const found = findByCode(products, code);
       if (!found) {
-        if (can("storekeeper")) setDialog({ open: true, barcode: code });
+        if (canAction("inventory.create")) setDialog({ open: true, barcode: code });
         else toast.info("الصنف غير مسجل");
       }
     },
-    [products, can],
+    [products, canAction],
   );
 
   async function exportExcel() {
     await writeSheet(
-      filtered.map((p) => ({
+      filtered.map((p) => Object.fromEntries(Object.entries({
         "الكود": p.code, "الاسم": p.name, "الوصف": p.description ?? "", "الموديل": p.model_no ?? "",
         "الباركود": p.barcode ?? "", "الباركود الخاص": p.custom_barcode ?? "", "الفئة": categoryName(p.category_id),
         "المورد": p.supplier ?? "",
         "الرف": p.shelf ?? "", "الوحدة": p.unit, "الوحدة الكبرى": p.major_unit ?? "", "سعة العبوة": p.pack_capacity,
         "التكلفة": p.cost, ...Object.fromEntries(PRICE_TIERS.map((t) => [t.label, p[t.key]])),
         ...Object.fromEntries(warehouses.map((w) => [w.name, qty(p.id, w.id)])), "الإجمالي": qty(p.id),
-      })),
+      }).filter(([label]) => {
+        const keys: Record<string,string> = { "الكود":"code", "الاسم":"name", "الوصف":"description", "الموديل":"model_no", "الباركود":"barcode", "الباركود الخاص":"custom_barcode", "الفئة":"category_id", "المورد":"supplier", "الرف":"shelf", "الوحدة":"unit", "الوحدة الكبرى":"major_unit", "سعة العبوة":"pack_capacity", "التكلفة":"cost" };
+        return canField(keys[label] ?? PRICE_TIERS.find(t => t.label === label)?.key ?? "quantity");
+      }))),
       `الأصناف-${new Date().toISOString().slice(0, 10)}.xlsx`,
     );
   }
@@ -106,9 +109,10 @@ function InventoryPage() {
           ...Object.fromEntries(PRICE_TIERS.map((t) => [t.key, num(r[t.label])])),
         };
         const existing = products.find((p) => (row.barcode && p.barcode === row.barcode) || (str(r["الكود"]) && p.code === str(r["الكود"])));
+        const allowedRow = Object.fromEntries(Object.entries(row).filter(([k]) => canField(k) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(k) || canAction("prices.update"))));
         const { error } = existing
-          ? await supabase.from("products").update(row).eq("id", existing.id)
-          : await supabase.from("products").insert(row);
+          ? await supabase.from("products").update(allowedRow).eq("id", existing.id)
+          : await supabase.from("products").insert(allowedRow as typeof row);
         if (error) toast.error(`${name}: ${error.message}`);
         else if (existing) updated++;
         else added++;
@@ -129,7 +133,7 @@ function InventoryPage() {
           <Input className="pr-10 h-11 bg-card" placeholder="ابحث بالاسم أو الكود أو الباركود…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <BarcodeScanner onDetected={onScan} />
-        {can("storekeeper") && (
+        {canAction("inventory.create") && (
           <Button className="h-10" onClick={() => setDialog({ open: true })}><Plus className="size-4" /> صنف جديد</Button>
         )}
       </div>
@@ -143,7 +147,7 @@ function InventoryPage() {
           <SelectContent><SelectItem value={ALL}>كل المستودعات</SelectItem>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
         </Select>
         <div className="flex-1" />
-        {can("storekeeper") && (
+        {canAction("inventory.import") && (
           <>
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => importExcel(e.target.files?.[0])} />
             <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importing}>
@@ -151,9 +155,9 @@ function InventoryPage() {
             </Button>
           </>
         )}
-        <Button variant="outline" onClick={exportExcel}><Download className="size-4" /> تصدير</Button>
-        <Button variant="outline" asChild><Link to="/catalog"><FileText className="size-4" /> كتالوج PDF</Link></Button>
-        <Button variant="outline" asChild><Link to="/labels"><Tags className="size-4" /> ملصقات</Link></Button>
+        {canAction("inventory.export") && <Button variant="outline" onClick={exportExcel}><Download className="size-4" /> تصدير</Button>}
+        {canPage("catalog") && <Button variant="outline" asChild><Link to="/catalog"><FileText className="size-4" /> كتالوج PDF</Link></Button>}
+        {canPage("labels") && <Button variant="outline" asChild><Link to="/labels"><Tags className="size-4" /> ملصقات</Link></Button>}
       </div>
 
       {loading ? (
@@ -164,12 +168,12 @@ function InventoryPage() {
             <thead className="bg-muted text-muted-foreground">
               <tr>
                 <th className="p-3 text-right">الصنف</th>
-                <th className="p-3 text-right">الكود / الباركود</th>
-                <th className="p-3 text-right">الفئة / الرف</th>
-                <th className="p-3 text-right">تجزئة</th>
-                {warehouses.map((w) => <th key={w.id} className="p-3 text-right whitespace-nowrap">{w.name}</th>)}
-                <th className="p-3 text-right">الإجمالي</th>
-                {can("storekeeper") && <th />}
+                {(canField("code") || canField("barcode") || canField("custom_barcode")) && <th className="p-3 text-right">الكود / الباركود</th>}
+                {(canField("category_id") || canField("shelf")) && <th className="p-3 text-right">الفئة / الرف</th>}
+                {canField("price") && <th className="p-3 text-right">تجزئة</th>}
+                {canField("quantity") && warehouses.map((w) => <th key={w.id} className="p-3 text-right whitespace-nowrap">{w.name}</th>)}
+                {canField("quantity") && <th className="p-3 text-right">الإجمالي</th>}
+                {canAction("inventory.edit") && <th />}
               </tr>
             </thead>
             <tbody>
@@ -180,20 +184,20 @@ function InventoryPage() {
                   <tr key={p.id} className="border-t">
                     <td className="p-3">
                       <div className="flex items-center gap-3 min-w-48">
-                        {p.image_url ? <img src={p.image_url} alt="" className="size-11 rounded-md object-cover" /> : <div className="size-11 rounded-md bg-muted grid place-items-center"><Package className="size-5 text-muted-foreground" /></div>}
+                        {canField("image_url") && (p.image_url ? <img src={p.image_url} alt="" className="size-11 rounded-md object-cover" /> : <div className="size-11 rounded-md bg-muted grid place-items-center"><Package className="size-5 text-muted-foreground" /></div>)}
                         <div>
-                          <div className="font-medium">{p.name}</div>
-                          <ExpiryBadge date={p.expiry_date} />
+                          {canField("name") && <div className="font-medium">{p.name}</div>}
+                          {canField("expiry_date") && <ExpiryBadge date={p.expiry_date} />}
                           <div className="text-xs text-muted-foreground">{p.unit}{p.major_unit ? ` · ${p.major_unit} (${Number(p.pack_capacity)})` : ""}{p.model_no ? ` · ${p.model_no}` : ""}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 font-mono text-xs" dir="ltr"><div>{p.code}</div><div className="text-muted-foreground">{p.barcode ?? p.custom_barcode}</div></td>
-                    <td className="p-3 text-xs"><div>{categoryName(p.category_id) || "—"}</div><div className="text-muted-foreground">{p.shelf}</div></td>
-                    <td className="p-3">{Number(p.price)}</td>
-                    {warehouses.map((w) => <td key={w.id} className="p-3">{qty(p.id, w.id)}</td>)}
-                    <td className={`p-3 font-bold ${low ? "text-destructive" : ""}`}>{total}</td>
-                    {can("storekeeper") && (
+                    {(canField("code") || canField("barcode") || canField("custom_barcode")) && <td className="p-3 font-mono text-xs" dir="ltr"><div>{p.code}</div><div className="text-muted-foreground">{p.barcode ?? p.custom_barcode}</div></td>}
+                    {(canField("category_id") || canField("shelf")) && <td className="p-3 text-xs">{canField("category_id") && <div>{categoryName(p.category_id) || "—"}</div>}<div className="text-muted-foreground">{p.shelf}</div></td>}
+                    {canField("price") && <td className="p-3">{Number(p.price)}</td>}
+                    {canField("quantity") && warehouses.map((w) => <td key={w.id} className="p-3">{qty(p.id, w.id)}</td>)}
+                    {canField("quantity") && <td className={`p-3 font-bold ${low ? "text-destructive" : ""}`}>{total}</td>}
+                    {canAction("inventory.edit") && (
                       <td className="p-2"><Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, product: p })} aria-label="تعديل"><Pencil className="size-4" /></Button></td>
                     )}
                   </tr>
