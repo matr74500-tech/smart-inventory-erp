@@ -161,7 +161,7 @@ function PurchasesPage() {
         </table>
       </div>
       <div className="flex flex-wrap items-center gap-4 mb-8">
-        {canField("cost") && canField("quantity") && <div className="text-lg">الإجمالي: <b>{total.toFixed(2)}</b></div>
+        {canField("cost") && canField("quantity") && <div className="text-lg">الإجمالي: <b>{total.toFixed(2)}</b></div>}
         <div className="flex-1" />
         <Button className="h-11 px-8" disabled={!canAction("purchases.post") || !canField("cost") || !canField("quantity") || !canField("supplier") || busy || !lines.length || !warehouse} onClick={post}>{busy ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} ترحيل الفاتورة</Button>
       </div>
