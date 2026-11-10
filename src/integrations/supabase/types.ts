@@ -576,6 +576,10 @@ export type Database = {
         Returns: string
       }
       receive_reorder: { Args: { _id: string }; Returns: undefined }
+      save_product_attributes: {
+        Args: { _attributes: Json; _product: string }
+        Returns: undefined
+      }
       set_stock: {
         Args: {
           _kind?: string
