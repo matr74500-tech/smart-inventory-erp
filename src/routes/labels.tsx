@@ -76,6 +76,8 @@ function LabelsPage() {
     </div>
   );
 
+  if (!canField("barcode") && !canField("custom_barcode")) return <AppShell title="الملصقات"><p>طباعة الملصقات تحتاج صلاحية الباركود.</p></AppShell>;
+
   return (
     <AppShell title="طباعة ملصقات الباركود">
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-5 no-print">

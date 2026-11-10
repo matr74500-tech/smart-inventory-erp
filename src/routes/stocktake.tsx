@@ -63,6 +63,8 @@ function StocktakePage() {
     toast.success("تم اعتماد الجرد وتسوية الأرصدة");
   }
 
+  if (!canField("quantity")) return <AppShell title="الجرد"><p>عرض هذه الشاشة يحتاج صلاحية الكميات.</p></AppShell>;
+
   return (
     <AppShell title="الجرد والإدخال الأولي" roles={["storekeeper"]}>
       <div className="flex flex-wrap gap-2 mb-5">

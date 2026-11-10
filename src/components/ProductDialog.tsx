@@ -79,14 +79,19 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       image_url: image,
       attributes: attrs,
     };
-    const allowedRow = Object.fromEntries(Object.entries(row).filter(([key]) => canField(key) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(key) || canAction("prices.update")))) as Partial<typeof row>;
+    const allowedRow = Object.fromEntries(Object.entries(row).filter(([key]) => (key === "attributes" ? visibleFields.length > 0 : canField(key)) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(key) || canAction("prices.update")))) as Partial<typeof row>;
     if (!p && !allowedRow.name) { toast.error("إضافة صنف تحتاج صلاحية الاسم"); return; }
     const initQty = canField("quantity") && canAction("stocktake.adjust") ? n("init_qty") : 0;
     setBusy(true);
     if (p) {
+      delete allowedRow.attributes;
       const { error } = await supabase.from("products").update(allowedRow).eq("id", p.id);
       setBusy(false);
       if (error) { toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message); return; }
+      if (visibleFields.length) {
+        const { error: attrError } = await supabase.rpc("save_product_attributes", { _product: p.id, _attributes: Object.fromEntries(Object.entries(attrs).filter(([k]) => canField(`attribute:${k}`))) });
+        if (attrError) { toast.error(attrError.message); return; }
+      }
       toast.success("تم حفظ التعديلات");
     } else {
       const { data, error } = await supabase.from("products").insert(allowedRow as typeof row).select("id").single();
@@ -112,7 +117,7 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
           {image ? <img src={image} alt="" className="size-full object-cover" /> : <ImagePlus className="size-7 text-muted-foreground" />}
           <input type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
           {image && (
-            <button type="button" onClick={(e) => { e.preventDefault(); setImage(null); }} className="absolute top-1 left-1 rounded-full bg-card p-0.5" aria-label="حذف الصورة"><X className="size-3" /></button>
+            <Button size="icon" variant="ghost" type="button" onClick={(e) => { e.preventDefault(); setImage(null); }} className="absolute top-1 left-1 rounded-full bg-card p-0.5" aria-label="حذف الصورة"><X className="size-3" /></Button>
           )}
         </label>}
         <div className="flex-1 space-y-2">

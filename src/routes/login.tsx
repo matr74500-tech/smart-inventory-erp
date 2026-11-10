@@ -16,6 +16,8 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "سجّل الدخول باسم المستخدم وكلمة المرور إلى سهيل سوفت." },
       { property: "og:title", content: "تسجيل الدخول | سهيل سوفت" },
       { property: "og:description", content: "الدخول إلى نظام نقاط البيع وإدارة المخزون." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LoginPage,

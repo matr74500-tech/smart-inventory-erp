@@ -103,6 +103,8 @@ function PurchasesPage() {
     setLines([]); setSupplier(""); loadHistory();
   }
 
+  if (!canField("cost") || !canField("quantity")) return <AppShell title="المشتريات"><p>عرض الفاتورة يحتاج صلاحية التكلفة والكميات.</p></AppShell>;
+
   return (
     <AppShell title="فاتورة مشتريات جديدة" roles={["storekeeper"]}>
       <div className="rounded-xl bg-card shadow-card p-4 grid sm:grid-cols-3 gap-3 mb-4">

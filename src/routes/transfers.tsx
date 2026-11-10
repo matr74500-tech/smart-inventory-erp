@@ -45,6 +45,8 @@ function TransfersPage() {
     setAmount("");
   }
 
+  if (!canField("quantity")) return <AppShell title="التحويلات"><p>عرض هذه الشاشة يحتاج صلاحية الكميات.</p></AppShell>;
+
   return (
     <AppShell title="التحويلات المخزنية" roles={["storekeeper"]}>
       <form onSubmit={submit} className="rounded-xl bg-card shadow-card p-6 grid gap-4 max-w-xl">

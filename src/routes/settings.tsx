@@ -33,10 +33,10 @@ const KINDS: Record<string, string> = { text: "نص", number: "رقم", select: 
 
 function SettingsPage() {
   const inv = useInventory();
-  const { can } = useAuth();
+  const { can, canAction } = useAuth();
   return (
     <AppShell title="الإعدادات" roles={["storekeeper"]}>
-      <Tabs defaultValue="categories" dir="rtl">
+      <fieldset disabled={!canAction("settings.manage")}><Tabs defaultValue="categories" dir="rtl">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="categories">الفئات</TabsTrigger>
           <TabsTrigger value="warehouses">المستودعات</TabsTrigger>
@@ -59,7 +59,7 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="mins"><MinimumsEditor inv={inv} /></TabsContent>
         <TabsContent value="shop"><ShopSettings name={inv.settings?.shop_name ?? ""} phone={inv.settings?.phone ?? ""} /></TabsContent>
-      </Tabs>
+      </Tabs></fieldset>
     </AppShell>
   );
 }
