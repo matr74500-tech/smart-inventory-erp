@@ -35,6 +35,30 @@ export type Database = {
         }
         Relationships: []
       }
+      backups: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          size_bytes: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          size_bytes?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          size_bytes?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -83,6 +107,30 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_permissions: {
+        Row: {
+          actions: string[]
+          fields: string[]
+          pages: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actions?: string[]
+          fields?: string[]
+          pages?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actions?: string[]
+          fields?: string[]
+          pages?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           attributes: Json
@@ -93,6 +141,7 @@ export type Database = {
           created_at: string
           custom_barcode: string | null
           description: string | null
+          expiry_date: string | null
           id: string
           image_url: string | null
           major_unit: string | null
@@ -107,6 +156,7 @@ export type Database = {
           reorder_level: number
           reorder_qty: number
           shelf: string | null
+          supplier: string | null
           unit: string
           updated_at: string
           warehouse_id: string | null
@@ -120,6 +170,7 @@ export type Database = {
           created_at?: string
           custom_barcode?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
           image_url?: string | null
           major_unit?: string | null
@@ -134,6 +185,7 @@ export type Database = {
           reorder_level?: number
           reorder_qty?: number
           shelf?: string | null
+          supplier?: string | null
           unit?: string
           updated_at?: string
           warehouse_id?: string | null
@@ -147,6 +199,7 @@ export type Database = {
           created_at?: string
           custom_barcode?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
           image_url?: string | null
           major_unit?: string | null
@@ -161,6 +214,7 @@ export type Database = {
           reorder_level?: number
           reorder_qty?: number
           shelf?: string | null
+          supplier?: string | null
           unit?: string
           updated_at?: string
           warehouse_id?: string | null
@@ -361,6 +415,39 @@ export type Database = {
           },
         ]
       }
+      stock_minimums: {
+        Row: {
+          min_qty: number
+          product_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          min_qty?: number
+          product_id: string
+          warehouse_id: string
+        }
+        Update: {
+          min_qty?: number
+          product_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_minimums_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_minimums_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -473,6 +560,10 @@ export type Database = {
     Functions: {
       can_manage_stock: { Args: { _user_id: string }; Returns: boolean }
       ean13: { Args: { _d12: string }; Returns: string }
+      employee_can: {
+        Args: { _key: string; _kind: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -485,6 +576,10 @@ export type Database = {
         Returns: string
       }
       receive_reorder: { Args: { _id: string }; Returns: undefined }
+      save_product_attributes: {
+        Args: { _attributes: Json; _product: string }
+        Returns: undefined
+      }
       set_stock: {
         Args: {
           _kind?: string
@@ -498,6 +593,7 @@ export type Database = {
         Args: { _from: string; _product: string; _qty: number; _to: string }
         Returns: undefined
       }
+      visible_products: { Args: never; Returns: Json[] }
     }
     Enums: {
       app_role: "admin" | "storekeeper" | "cashier"

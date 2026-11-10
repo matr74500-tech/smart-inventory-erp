@@ -33,15 +33,16 @@ const KINDS: Record<string, string> = { text: "نص", number: "رقم", select: 
 
 function SettingsPage() {
   const inv = useInventory();
-  const { can } = useAuth();
+  const { can, canAction } = useAuth();
   return (
     <AppShell title="الإعدادات" roles={["storekeeper"]}>
-      <Tabs defaultValue="categories" dir="rtl">
+      <fieldset disabled={!canAction("settings.manage")}><Tabs defaultValue="categories" dir="rtl">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="categories">الفئات</TabsTrigger>
           <TabsTrigger value="warehouses">المستودعات</TabsTrigger>
           <TabsTrigger value="units">الوحدات</TabsTrigger>
           <TabsTrigger value="fields">حقول إضافية</TabsTrigger>
+          <TabsTrigger value="mins">حد أدنى لكل مستودع</TabsTrigger>
           {can("admin") && <TabsTrigger value="shop">بيانات المحل</TabsTrigger>}
         </TabsList>
         <TabsContent value="categories">
@@ -56,8 +57,9 @@ function SettingsPage() {
         <TabsContent value="fields">
           <ListEditor table="custom_fields" rows={inv.fields} cols={[{ key: "name", label: "اسم الحقل (مثل اللون، الحجم، الوزن)" }, { key: "kind", label: "النوع", type: "kind" }, { key: "options", label: "الخيارات (افصل بفاصلة)", type: "list" }]} hint="الحقول الإضافية تظهر في نموذج الصنف وهي اختيارية." />
         </TabsContent>
+        <TabsContent value="mins"><MinimumsEditor inv={inv} /></TabsContent>
         <TabsContent value="shop"><ShopSettings name={inv.settings?.shop_name ?? ""} phone={inv.settings?.phone ?? ""} /></TabsContent>
-      </Tabs>
+      </Tabs></fieldset>
     </AppShell>
   );
 }
@@ -81,15 +83,15 @@ function ListEditor({ table, rows, cols, hint }: { table: Table; rows: AnyRow[];
 
   async function add(e: FormEvent) {
     e.preventDefault();
-    if (!draft[cols[0].key]?.trim()) return;
+    if (!draft[cols[0]?.key ?? ""]?.trim()) return;
     const { error } = await supabase.from(table).insert(payload(draft) as never);
-    if (error) return toast.error(error.code === "23505" ? "الاسم موجود مسبقاً" : error.message);
+    if (error) { toast.error(error.code === "23505" ? "الاسم موجود مسبقاً" : error.message); return; }
     setDraft(empty);
     toast.success("تمت الإضافة");
   }
   async function save(id: string) {
     const { error } = await supabase.from(table).update(payload(edit) as never).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setEditing(null);
   }
   async function remove(id: string) {
@@ -154,5 +156,40 @@ function ShopSettings({ name, phone }: { name: string; phone: string }) {
       <div className="space-y-1"><Label>رقم الهاتف</Label><Input name="phone" dir="ltr" defaultValue={phone} /></div>
       <Button type="submit" className="sm:col-span-2">حفظ</Button>
     </form>
+  );
+}
+
+function MinimumsEditor({ inv }: { inv: ReturnType<typeof useInventory> }) {
+  const [wh, setWh] = useState("");
+  const [q, setQ] = useState("");
+  const warehouse = wh || inv.warehouses[0]?.id || "";
+  const minOf = (pid: string) => inv.minimums.find((m) => m.product_id === pid && m.warehouse_id === warehouse)?.min_qty;
+  async function save(pid: string, v: string) {
+    const n = Number(v || 0);
+    if (Number(minOf(pid) ?? 0) === n) return;
+    const { error } = await supabase.from("stock_minimums").upsert({ product_id: pid, warehouse_id: warehouse, min_qty: n });
+    if (error) toast.error(error.message); else toast.success("تم حفظ الحد الأدنى");
+  }
+  const list = inv.products.filter((p) => !q || p.name.includes(q) || p.code?.includes(q));
+  return (
+    <div className="space-y-3 mt-4">
+      <div className="flex flex-wrap gap-2">
+        <Select value={warehouse} onValueChange={setWh}>
+          <SelectTrigger className="w-56 bg-card"><SelectValue placeholder="المستودع" /></SelectTrigger>
+          <SelectContent>{inv.warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
+        </Select>
+        <Input className="flex-1 min-w-40 bg-card" placeholder="بحث عن صنف…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <p className="text-xs text-muted-foreground">لكل مستودع (مثل المعرض الرئيسي) حد أدنى خاص. يظهر تنبيه فوري عند نزول الرصيد عنه. اترك 0 لإلغاء التنبيه.</p>
+      <div className="rounded-xl bg-card shadow-card divide-y">
+        {list.map((p) => (
+          <div key={p.id + warehouse} className="flex items-center gap-3 p-3">
+            <div className="flex-1"><div className="font-medium">{p.name}</div><div className="text-xs text-muted-foreground">الرصيد هنا: {inv.qty(p.id, warehouse)} {p.unit}</div></div>
+            <Input type="number" min="0" step="any" className="w-28" placeholder="الحد" defaultValue={minOf(p.id) ?? ""} onBlur={(e) => save(p.id, e.target.value)} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} />
+          </div>
+        ))}
+        {!list.length && <div className="p-6 text-center text-muted-foreground">لا توجد أصناف</div>}
+      </div>
+    </div>
   );
 }

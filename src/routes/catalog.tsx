@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Printer, Package } from "lucide-react";
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/catalog")({
 const ALL = "__all";
 
 function CatalogPage() {
+  const { canAction, canField } = useAuth();
   const { products, categories, settings, qty, categoryName } = useInventory();
   const [cat, setCat] = useState(ALL);
   const [tier, setTier] = useState<PriceKey>("price");
@@ -38,6 +40,7 @@ function CatalogPage() {
   );
 
   function print() {
+    if (!canAction("catalog.print")) return;
     const style = document.createElement("style");
     style.textContent = "@page { size: A4; margin: 10mm; }";
     document.head.appendChild(style);
@@ -54,7 +57,7 @@ function CatalogPage() {
         </div>
         <div className="space-y-1"><Label>السعر المعروض</Label>
           <Select value={tier} onValueChange={(v) => setTier(v as PriceKey)}><SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-            <SelectContent>{PRICE_TIERS.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent></Select>
+            <SelectContent>{PRICE_TIERS.filter(t => canField(t.key)).map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent></Select>
         </div>
         <div className="space-y-1"><Label>أعمدة</Label>
           <Select value={cols} onValueChange={setCols}><SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
@@ -62,7 +65,7 @@ function CatalogPage() {
         </div>
         <label className="flex items-center gap-2 text-sm h-9"><Switch checked={inStock} onCheckedChange={setInStock} /> المتوفر فقط</label>
         <div className="flex-1" />
-        <Button onClick={print}><Printer className="size-4" /> تصدير PDF</Button>
+        <Button disabled={!canAction("catalog.print")} onClick={print}><Printer className="size-4" /> تصدير PDF</Button>
       </div>
       <p className="no-print text-xs text-muted-foreground mb-3">اختر "حفظ بصيغة PDF" في نافذة الطباعة لمشاركة الكتالوج مع الزبائن.</p>
 
@@ -79,7 +82,7 @@ function CatalogPage() {
               </div>
               <div className="font-semibold text-sm leading-snug">{p.name}</div>
               {p.description && <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>}
-              <div className="mt-1 text-lg font-bold text-primary">{Number(p[tier])} <span className="text-xs">ر.ي</span></div>
+              {canField(tier) && <div className="mt-1 text-lg font-bold text-primary">{Number(p[tier])} <span className="text-xs">ر.ي</span></div>}
             </div>
           ))}
         </div>

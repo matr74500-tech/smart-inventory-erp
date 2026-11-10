@@ -1,0 +1,1 @@
+DO $$ DECLARE def text; BEGIN SELECT pg_get_functiondef('public.visible_products()'::regprocedure) INTO def; def:=replace(def,'e.key IN (''id'',''created_at'',''updated_at'')','e.key IN (''id'',''created_at'',''updated_at'',''attributes'')'); EXECUTE def; END $$;

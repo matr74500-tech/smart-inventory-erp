@@ -1,0 +1,37 @@
+export const PAGES = [
+  ["dashboard", "الرئيسية"], ["inventory", "الأصناف والمخزون"], ["purchases", "المشتريات"],
+  ["prices", "تحديث الأسعار"], ["alerts", "التنبيهات"], ["labels", "ملصقات الباركود"],
+  ["catalog", "الكتالوج"], ["stocktake", "الجرد"], ["transfers", "التحويلات"],
+  ["reorders", "التوريد"], ["settings", "الإعدادات"], ["backup", "النسخ الاحتياطي"], ["users", "المستخدمون"],
+] as const;
+export const ACTIONS = [
+  ["inventory.create", "إضافة صنف"], ["inventory.edit", "تعديل صنف"], ["inventory.delete", "حذف صنف"],
+  ["inventory.import", "استيراد الأصناف"], ["inventory.export", "تصدير الأصناف"],
+  ["prices.update", "تغيير الأسعار والتكلفة"], ["purchases.post", "اعتماد المشتريات"],
+  ["stocktake.adjust", "اعتماد الجرد والرصيد الافتتاحي"], ["transfers.post", "تنفيذ تحويل"],
+  ["reorders.receive", "استلام توريد"], ["settings.manage", "تعديل الإعدادات"],
+  ["catalog.print", "طباعة الكتالوج"], ["labels.print", "طباعة الملصقات"], ["backup.manage", "إنشاء واستعادة النسخ الاحتياطية"],
+] as const;
+export const FIELDS = [
+  ["name", "اسم الصنف"], ["code", "كود الصنف"], ["model_no", "رقم الموديل"],
+  ["barcode", "باركود المصنع"], ["custom_barcode", "الباركود المولد"], ["description", "الوصف والملاحظات"],
+  ["category_id", "الفئة"], ["warehouse_id", "المستودع الافتراضي"], ["shelf", "الرف"],
+  ["unit", "الوحدة الأساسية"], ["major_unit", "الوحدة الكبرى"], ["pack_capacity", "سعة العبوة"],
+  ["cost", "تكلفة الشراء"], ["price", "سعر التجزئة"], ["price_special", "السعر الخاص"],
+  ["price_half", "نصف جملة"], ["price_wholesale", "الجملة"], ["price_bulk", "جملة الجملة"],
+  ["image_url", "الصورة"], ["expiry_date", "تاريخ الصلاحية"], ["supplier", "المورد"],
+  ["reorder_level", "حد الطلب"], ["reorder_qty", "كمية إعادة التوريد"], ["quantity", "أرصدة المستودعات والكميات"],
+] as const;
+export type PermissionSet = { pages: string[]; actions: string[]; fields: string[] };
+export function defaultPermissions(roles: string[]): PermissionSet {
+  const manager = roles.includes("storekeeper") || roles.includes("admin");
+  return {
+    pages: PAGES.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["backup", "users"].includes(k) : ["dashboard", "inventory", "alerts", "labels", "catalog"].includes(k))),
+    actions: ACTIONS.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["inventory.delete", "backup.manage"].includes(k) : ["inventory.export", "catalog.print", "labels.print"].includes(k))),
+    fields: [...FIELDS.map(([k]) => k), "attributes"],
+  };
+}
+export function isPermitted(roles: string[], permissions: PermissionSet | null, kind: keyof PermissionSet, key: string) {
+  return roles.includes("admin") || (permissions ?? defaultPermissions(roles))[kind].includes(key);
+}
+export const pageForPath = (path: string) => path === "/" ? "dashboard" : path.split("/").filter(Boolean)[0] ?? "dashboard";

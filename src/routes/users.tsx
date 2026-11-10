@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Loader2, Trash2, UserCircle, UserPlus } from "lucide-react";
+import { KeyRound, Loader2, Trash2, UserCircle, UserPlus, ShieldCheck } from "lucide-react";
+import { PermissionEditor } from "@/components/PermissionEditor";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/users")({
   head: () => ({
     meta: [
       { title: "المستخدمون والصلاحيات | سهيل سوفت" },
-      { name: "description", content: "إنشاء مستخدمين بكلمات مرور خاصة وتحديد صلاحياتهم: مدير، أمين مخزن، بائع." },
+      { name: "description", content: "تحديد الصفحات والعمليات والأعمدة والتفاصيل لكل موظف بصورة مستقلة." },
       { property: "og:title", content: "المستخدمون والصلاحيات | سهيل سوفت" },
       { property: "og:description", content: "إدارة المستخدمين والصلاحيات." },
       { property: "og:type", content: "website" },
@@ -40,6 +41,7 @@ function UsersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [pwFor, setPwFor] = useState<Row | null>(null);
+  const [permissionsFor, setPermissionsFor] = useState<Row | null>(null);
   const create = useServerFn(createUser);
   const resetPw = useServerFn(resetUserPassword);
   const remove = useServerFn(deleteUser);
@@ -66,7 +68,7 @@ function UsersPage() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const roles = (Object.keys(ROLE_LABELS) as Role[]).filter((r) => f.get(`role_${r}`));
-    if (!roles.length) return toast.error("اختر صلاحية واحدة على الأقل");
+    if (!roles.length) { toast.error("اختر صلاحية واحدة على الأقل"); return; }
     try {
       await create({ data: { username: String(f.get("username")), password: String(f.get("password")), fullName: String(f.get("full_name") || ""), roles } });
       toast.success("تم إنشاء المستخدم");
@@ -104,12 +106,13 @@ function UsersPage() {
           <div key={u.id} className="flex flex-wrap items-center gap-4 p-4">
             <UserCircle className="size-8 text-muted-foreground" />
             <div className="flex-1 min-w-32"><div className="font-medium" dir="ltr">{u.username}</div>{u.full_name && <div className="text-xs text-muted-foreground">{u.full_name}</div>}</div>
-            {(Object.keys(ROLE_LABELS) as Role[]).map((role) => (
+            {(["admin"] as Role[]).map((role) => (
               <label key={role} className="flex items-center gap-2 text-sm">
                 <Switch checked={u.roles.includes(role)} disabled={role === "admin" && u.id === session?.user.id} onCheckedChange={(v) => toggle(u.id, role, v)} />
                 {ROLE_LABELS[role]}
               </label>
             ))}
+            {!u.roles.includes("admin") && <Button variant="outline" onClick={() => setPermissionsFor(u)}><ShieldCheck className="size-4" /> تخصيص الصلاحيات</Button>}
             <Button size="icon" variant="ghost" onClick={() => setPwFor(u)} aria-label="تغيير كلمة المرور"><KeyRound className="size-4" /></Button>
             {u.id !== session?.user.id && <Button size="icon" variant="ghost" onClick={() => onDelete(u)} aria-label="حذف"><Trash2 className="size-4 text-destructive" /></Button>}
           </div>
@@ -117,6 +120,7 @@ function UsersPage() {
         {!rows.length && <Loader2 className="mx-auto my-6 size-6 animate-spin text-primary" />}
       </div>
 
+      {permissionsFor && <PermissionEditor user={permissionsFor} onClose={() => setPermissionsFor(null)} />}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent dir="rtl">
           <DialogHeader><DialogTitle>مستخدم جديد</DialogTitle></DialogHeader>

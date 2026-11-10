@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
+import { pageForPath } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Boxes,
@@ -17,8 +19,10 @@ import {
   Bell,
   Settings,
   Search,
+  DatabaseBackup,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { LowStockWatcher } from "@/components/LowStockWatcher";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
@@ -33,11 +37,13 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/transfers", label: "التحويلات", icon: ArrowLeftRight, roles: ["storekeeper"] },
   { to: "/reorders", label: "التوريد", icon: Truck, roles: ["storekeeper"] },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
+  { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
 ];
 
 export function AppShell({ title, roles, children }: { title: string; roles?: Role[]; children: ReactNode }) {
-  const { session, loading, username, roles: myRoles, can, signOut } = useAuth();
+  const { session, loading, username, roles: myRoles, canPage, can, signOut } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -53,7 +59,7 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
     );
   }
 
-  const allowed = !roles || can(...roles);
+  const allowed = canPage(pageForPath(location.pathname)) && (location.pathname !== "/users" && location.pathname !== "/backup" || !roles || can(...roles));
 
   return (
     <div dir="rtl" className="min-h-screen md:flex print:block">
@@ -63,7 +69,7 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
           <div className="text-xs opacity-70">نقاط البيع وإدارة المخزون</div>
         </div>
         <nav className="flex md:flex-col gap-1 p-2 overflow-x-auto flex-1">
-          {NAV.filter((n) => !n.roles || can(...n.roles)).map((n) => (
+          {NAV.filter((n) => canPage(pageForPath(n.to)) && (!["/users", "/backup"].includes(n.to) || can("admin"))).map((n) => (
             <Link
               key={n.to}
               to={n.to}
@@ -81,25 +87,26 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
             <div className="font-semibold">{username}</div>
             <div className="text-xs opacity-70">{myRoles.map((r) => ROLE_LABELS[r]).join("، ")}</div>
           </div>
-          <button
+          <Button variant="ghost" size="icon"
             onClick={() => signOut()}
             className="rounded-lg p-2 hover:bg-sidebar-accent"
             aria-label="تسجيل الخروج"
           >
             <LogOut className="size-5" />
-          </button>
+          </Button>
         </div>
       </aside>
       <main className="flex-1 min-w-0 p-4 md:p-8 max-w-7xl print:p-0 print:max-w-none">
         <div className="no-print flex items-center gap-3 mb-6">
           <h1 className="flex-1 text-2xl md:text-3xl font-bold">{title}</h1>
-          <button
+          {canPage("inventory") && <Button variant="outline"
             onClick={() => setSearchOpen(true)}
             className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
           >
             <Search className="size-4" /> <span className="hidden sm:inline">بحث سريع عن صنف</span>
-          </button>
+          </Button>}
         </div>
+        {canPage("alerts") && <LowStockWatcher />}
         {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
         {allowed ? (
           children

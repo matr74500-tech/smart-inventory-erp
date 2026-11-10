@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/lib/auth";
 
 export type Product = Tables<"products">;
 export type Warehouse = Tables<"warehouses">;
@@ -10,11 +11,13 @@ export type Category = Tables<"categories">;
 export type Unit = Tables<"units">;
 export type CustomField = Tables<"custom_fields">;
 export type Settings = Tables<"app_settings">;
+export type StockMin = Tables<"stock_minimums">;
 
-const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings"];
+const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums"];
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
+  const { session, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [stock, setStock] = useState<StockRow[]>([]);
@@ -23,11 +26,13 @@ export function useInventory() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [fields, setFields] = useState<CustomField[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [minimums, setMinimums] = useState<StockMin[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [p, w, s, r, c, u, f, st] = await Promise.all([
-      supabase.from("products").select("*").order("name"),
+    if (!session || authLoading) return;
+    const [p, w, s, r, c, u, f, st, mn] = await Promise.all([
+      supabase.rpc("visible_products"),
       supabase.from("warehouses").select("*").order("created_at"),
       supabase.from("stock").select("*"),
       supabase.from("reorder_requests").select("*").order("created_at", { ascending: false }),
@@ -35,8 +40,9 @@ export function useInventory() {
       supabase.from("units").select("*").order("created_at"),
       supabase.from("custom_fields").select("*").order("created_at"),
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+      supabase.from("stock_minimums").select("*"),
     ]);
-    setProducts(p.data ?? []);
+    setProducts((p.data ?? []) as unknown as Product[]);
     setWarehouses(w.data ?? []);
     setStock(s.data ?? []);
     setReorders(r.data ?? []);
@@ -44,8 +50,9 @@ export function useInventory() {
     setUnits(u.data ?? []);
     setFields(f.data ?? []);
     setSettings(st.data ?? null);
+    setMinimums(mn.data ?? []);
     setLoading(false);
-  }, []);
+  }, [session?.user.id, authLoading]);
 
   useEffect(() => {
     load();
@@ -76,5 +83,5 @@ export function useInventory() {
 
   const categoryName = useCallback((id: string | null) => categories.find((c) => c.id === id)?.name ?? "", [categories]);
 
-  return { products, warehouses, stock, reorders, categories, units, fields, settings, loading, qty, categoryName, reload: load };
+  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, loading, qty, categoryName, reload: load };
 }

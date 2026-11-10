@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2, Upload, Search, CheckCircle2 } from "lucide-react";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/purchases")({
 type Line = { product: Product; qty: number; unit: "base" | "major"; cost: number; price: string; wholesale: string };
 
 function PurchasesPage() {
+  const { canAction, canField } = useAuth();
   const { products, warehouses } = useInventory();
   const [wh, setWh] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -49,7 +51,7 @@ function PurchasesPage() {
   function addProduct(p: Product, qty = 1, cost?: number, price = "", wholesale = "") {
     setLines((ls) => {
       const i = ls.findIndex((l) => l.product.id === p.id);
-      if (i >= 0) { const n = [...ls]; n[i] = { ...n[i], qty: n[i].qty + qty }; return n; }
+      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + qty } : l));
       return [...ls, { product: p, qty, unit: "base", cost: cost ?? Number(p.cost), price, wholesale }];
     });
     setQ("");
@@ -85,20 +87,23 @@ function PurchasesPage() {
   const total = lines.reduce((a, l) => a + l.qty * l.cost, 0);
 
   async function post() {
+    if (!canAction("purchases.post")) return;
     if (!warehouse || !lines.length) return;
     setBusy(true);
     const items = lines.map((l) => ({
       product_id: l.product.id,
       qty: toBaseQty(l.qty, l.unit, Number(l.product.pack_capacity)),
       cost: Math.round(baseCost(l) * 1000) / 1000,
-      price: l.price, price_wholesale: l.wholesale,
+      price: canAction("prices.update") && canField("price") ? l.price : "", price_wholesale: canAction("prices.update") && canField("price_wholesale") ? l.wholesale : "",
     }));
     const { error } = await supabase.rpc("post_purchase", { _supplier: supplier || "", _warehouse: warehouse, _items: items });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("تم ترحيل الفاتورة وتحديث الكميات والأسعار");
     setLines([]); setSupplier(""); loadHistory();
   }
+
+  if (!canField("cost") || !canField("quantity")) return <AppShell title="المشتريات"><p>عرض الفاتورة يحتاج صلاحية التكلفة والكميات.</p></AppShell>;
 
   return (
     <AppShell title="فاتورة مشتريات جديدة" roles={["storekeeper"]}>
@@ -107,7 +112,7 @@ function PurchasesPage() {
           <Select value={warehouse} onValueChange={setWh}><SelectTrigger><SelectValue placeholder="اختر" /></SelectTrigger>
             <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent></Select>
         </div>
-        <div className="space-y-1"><Label>المورد</Label><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="اسم المورد" /></div>
+        {canField("supplier") && <div className="space-y-1"><Label>المورد</Label><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="اسم المورد" /></div>}
         <div className="flex items-end gap-2">
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => importExcel(e.target.files?.[0])} />
           <Button variant="outline" className="flex-1" onClick={() => fileRef.current?.click()}><Upload className="size-4" /> استيراد Excel</Button>
@@ -135,7 +140,7 @@ function PurchasesPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted text-muted-foreground"><tr>
             <th className="p-3 text-right">الصنف</th><th className="p-3 text-right">الوحدة</th><th className="p-3 text-right">الكمية</th>
-            <th className="p-3 text-right">التكلفة</th><th className="p-3 text-right">سعر تجزئة جديد</th><th className="p-3 text-right">سعر جملة جديد</th><th className="p-3 text-right">الإجمالي</th><th />
+            {canField("cost") && <th className="p-3 text-right">التكلفة</th>}{canField("price") && <th className="p-3 text-right">سعر تجزئة جديد</th>}{canField("price_wholesale") && <th className="p-3 text-right">سعر جملة جديد</th>}{canField("cost") && canField("quantity") && <th className="p-3 text-right">الإجمالي</th>}<th />
           </tr></thead>
           <tbody>
             {lines.map((l, i) => (
@@ -146,10 +151,10 @@ function PurchasesPage() {
                     <SelectContent><SelectItem value="base">{l.product.unit}</SelectItem>{l.product.major_unit && <SelectItem value="major">{l.product.major_unit} ({Number(l.product.pack_capacity)})</SelectItem>}</SelectContent></Select>
                 </td>
                 <td className="p-1.5"><Input className="w-20 h-9" type="number" min="0" step="any" value={l.qty} onChange={(e) => update(i, { qty: Number(e.target.value) })} /></td>
-                <td className="p-1.5"><Input className="w-24 h-9" type="number" min="0" step="0.01" value={l.cost} onChange={(e) => update(i, { cost: Number(e.target.value) })} /></td>
-                <td className="p-1.5"><Input className="w-24 h-9" type="number" min="0" step="0.01" placeholder={String(Number(l.product.price))} value={l.price} onChange={(e) => update(i, { price: e.target.value })} /></td>
-                <td className="p-1.5"><Input className="w-24 h-9" type="number" min="0" step="0.01" placeholder={String(Number(l.product.price_wholesale))} value={l.wholesale} onChange={(e) => update(i, { wholesale: e.target.value })} /></td>
-                <td className="p-3 font-semibold">{(l.qty * l.cost).toFixed(2)}</td>
+                {canField("cost") && <td className="p-1.5"><Input className="w-24 h-9" type="number" min="0" step="0.01" value={l.cost} onChange={(e) => update(i, { cost: Number(e.target.value) })} /></td>}
+                {canField("price") && <td className="p-1.5"><Input disabled={!canAction("prices.update")} className="w-24 h-9" type="number" min="0" step="0.01" placeholder={String(Number(l.product.price))} value={l.price} onChange={(e) => update(i, { price: e.target.value })} /></td>}
+                {canField("price_wholesale") && <td className="p-1.5"><Input disabled={!canAction("prices.update")} className="w-24 h-9" type="number" min="0" step="0.01" placeholder={String(Number(l.product.price_wholesale))} value={l.wholesale} onChange={(e) => update(i, { wholesale: e.target.value })} /></td>}
+                {canField("cost") && canField("quantity") && <td className="p-3 font-semibold">{(l.qty * l.cost).toFixed(2)}</td>}
                 <td className="p-1.5"><Button size="icon" variant="ghost" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))} aria-label="حذف"><Trash2 className="size-4 text-destructive" /></Button></td>
               </tr>
             ))}
@@ -158,9 +163,9 @@ function PurchasesPage() {
         </table>
       </div>
       <div className="flex flex-wrap items-center gap-4 mb-8">
-        <div className="text-lg">الإجمالي: <b>{total.toFixed(2)}</b></div>
+        {canField("cost") && canField("quantity") && <div className="text-lg">الإجمالي: <b>{total.toFixed(2)}</b></div>}
         <div className="flex-1" />
-        <Button className="h-11 px-8" disabled={busy || !lines.length || !warehouse} onClick={post}>{busy ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} ترحيل الفاتورة</Button>
+        <Button className="h-11 px-8" disabled={!canAction("purchases.post") || !canField("cost") || !canField("quantity") || !canField("supplier") || busy || !lines.length || !warehouse} onClick={post}>{busy ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} ترحيل الفاتورة</Button>
       </div>
       <p className="text-xs text-muted-foreground mb-6">أعمدة ملف الاستيراد: الباركود أو الكود أو الاسم، الكمية، التكلفة، سعر التجزئة، سعر الجملة (اختياري).</p>
 

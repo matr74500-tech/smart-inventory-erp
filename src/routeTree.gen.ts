@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
+import { Route as BackupRouteImport } from './routes/backup'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LabelsRouteImport } from './routes/labels'
@@ -31,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AlertsRoute = AlertsRouteImport.update({
   id: '/alerts',
   path: '/alerts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackupRoute = BackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogRoute = CatalogRouteImport.update({
@@ -92,6 +98,7 @@ const UsersRoute = UsersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/alerts': typeof AlertsRoute
+  '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/alerts'
+    | '/backup'
     | '/catalog'
     | '/inventory'
     | '/labels'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/alerts'
+    | '/backup'
     | '/catalog'
     | '/inventory'
     | '/labels'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/alerts'
+    | '/backup'
     | '/catalog'
     | '/inventory'
     | '/labels'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AlertsRoute: typeof AlertsRoute
+  BackupRoute: typeof BackupRoute
   CatalogRoute: typeof CatalogRoute
   InventoryRoute: typeof InventoryRoute
   LabelsRoute: typeof LabelsRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/alerts'
       fullPath: '/alerts'
       preLoaderRoute: typeof AlertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backup': {
+      id: '/backup'
+      path: '/backup'
+      fullPath: '/backup'
+      preLoaderRoute: typeof BackupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/catalog': {
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AlertsRoute: AlertsRoute,
+  BackupRoute: BackupRoute,
   CatalogRoute: CatalogRoute,
   InventoryRoute: InventoryRoute,
   LabelsRoute: LabelsRoute,
