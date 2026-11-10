@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Package, Search } from "lucide-react";
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 
 /** Quick product lookup by name, code or barcode, available from every screen. */
 export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { canField } = useAuth();
   const { products, warehouses, qty } = useInventory();
   const [q, setQ] = useState("");
   const navigate = useNavigate();
@@ -41,10 +43,10 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
               <div className="flex-1">
                 <div className="font-medium text-sm">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {warehouses.map((w) => `${w.name}: ${qty(p.id, w.id)}`).join(" · ")}
+                  {canField("quantity") && warehouses.map((w) => `${w.name}: ${qty(p.id, w.id)}`).join(" · ")}
                 </div>
               </div>
-              <div className="text-sm font-bold">{Number(p.price)}</div>
+              {canField("price") && <div className="text-sm font-bold">{Number(p.price)}</div>}
             </button>
           ))}
           {q.trim() && !list.length && <div className="p-6 text-center text-sm text-muted-foreground">لا توجد نتائج</div>}

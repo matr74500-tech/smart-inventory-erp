@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeftRight, Loader2 } from "lucide-react";
@@ -17,12 +18,15 @@ export const Route = createFileRoute("/transfers")({
       { name: "description", content: "حوّل الكميات بين المستودعات مع تحديث فوري." },
       { property: "og:title", content: "التحويلات المخزنية | سهيل سوفت" },
       { property: "og:description", content: "تحويل الأصناف بين المستودعات." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: TransfersPage,
 });
 
 function TransfersPage() {
+  const { canAction, canField } = useAuth();
   const { products, warehouses, qty } = useInventory();
   const [product, setProduct] = useState("");
   const [from, setFrom] = useState("");
@@ -31,6 +35,7 @@ function TransfersPage() {
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
+    if (!canAction("transfers.post")) return;
     e.preventDefault();
     setBusy(true);
     const { error } = await supabase.rpc("transfer_stock", { _product: product, _from: from, _to: to, _qty: Number(amount) });
@@ -69,7 +74,7 @@ function TransfersPage() {
         </div>
         {product && from && <p className="text-sm text-muted-foreground">المتوفر في المصدر: {qty(product, from)}</p>}
         <div className="space-y-1"><Label>الكمية</Label><Input type="number" min="0.01" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
-        <Button type="submit" disabled={busy || !product || !from || !to}>{busy && <Loader2 className="size-4 animate-spin" />} تنفيذ التحويل</Button>
+        <Button type="submit" disabled={!canAction("transfers.post") || !canField("quantity") || busy || !product || !from || !to}>{busy && <Loader2 className="size-4 animate-spin" />} تنفيذ التحويل</Button>
       </form>
     </AppShell>
   );

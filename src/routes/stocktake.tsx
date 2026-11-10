@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Loader2, Search } from "lucide-react";
@@ -19,12 +20,15 @@ export const Route = createFileRoute("/stocktake")({
       { name: "description", content: "أدخل الكميات الأولية أو نتائج الجرد الفعلي لكل مستودع." },
       { property: "og:title", content: "الجرد والإدخال الأولي | سهيل سوفت" },
       { property: "og:description", content: "جرد المخزون وتحديث الكميات فوراً." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: StocktakePage,
 });
 
 function StocktakePage() {
+  const { canAction, canField } = useAuth();
   const { products, warehouses, qty } = useInventory();
   const [wh, setWh] = useState<string>("");
   const [kind, setKind] = useState<"initial" | "count">("count");
@@ -35,6 +39,7 @@ function StocktakePage() {
   const list = useMemo(() => products.filter((p) => matchesSearch([p.name, p.barcode], q)), [products, q]);
 
   async function save(productId: string) {
+    if (!canAction("stocktake.adjust")) return;
     const v = drafts[productId];
     if (v === undefined || v === "") return;
     setSaving(productId);
@@ -47,6 +52,7 @@ function StocktakePage() {
 
   const pending = Object.entries(drafts).filter(([, v]) => v !== "");
   async function approveAll() {
+    if (!canAction("stocktake.adjust")) return;
     if (!pending.length || !confirm(`اعتماد الجرد وتسوية ${pending.length} صنف؟`)) return;
     setSaving("all");
     for (const [pid, v] of pending) {
@@ -76,7 +82,7 @@ function StocktakePage() {
           <Input className="pr-10 bg-card" placeholder="بحث…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         <BarcodeScanner onDetected={setQ} />
-        <Button onClick={approveAll} disabled={!pending.length || saving === "all"}>{saving === "all" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} اعتماد الجرد ({pending.length})</Button>
+        <Button onClick={approveAll} disabled={!canAction("stocktake.adjust") || !canField("quantity") || !pending.length || saving === "all"}>{saving === "all" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} اعتماد الجرد ({pending.length})</Button>
       </div>
       <div className="rounded-xl bg-card shadow-card divide-y">
         {list.map((p) => (
@@ -92,7 +98,7 @@ function StocktakePage() {
               onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
               onKeyDown={(e) => e.key === "Enter" && save(p.id)}
             />
-            <Button size="icon" onClick={() => save(p.id)} disabled={saving === p.id || !drafts[p.id]} aria-label="حفظ">
+            <Button size="icon" onClick={() => save(p.id)} disabled={!canAction("stocktake.adjust") || !canField("quantity") || saving === p.id || !drafts[p.id]} aria-label="حفظ">
               {saving === p.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             </Button>
           </div>

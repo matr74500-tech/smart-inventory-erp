@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Category, CustomField, Product, Unit, Warehouse } from "@/hooks/use-inventory";
+import { useAuth } from "@/lib/auth";
 import { PRICE_TIERS, fileToDataUrl } from "@/lib/inventory-utils";
 
 const NONE = "__none";
@@ -38,6 +39,8 @@ export function ProductDialog(props: Props) {
 
 function ProductForm({ onOpenChange, product, barcode, categories, warehouses, units, fields }: Props) {
   const p = product;
+  const { canField, canAction } = useAuth();
+  const visibleFields = fields.filter(fd => canField(`attribute:${fd.name}`));
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState(p?.barcode ?? barcode ?? "");
   const [category, setCategory] = useState(p?.category_id ?? NONE);
@@ -68,7 +71,7 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       major_unit: major === NONE ? null : major,
       pack_capacity: n("pack_capacity") || 1,
       cost: n("cost"),
-      price: n("price"), price_special: n("price_special"), price_half: n("price_half"),
+      price: f.has("price") ? n("price") : p?.price ?? 0, price_special: n("price_special"), price_half: n("price_half"),
       price_wholesale: n("price_wholesale"), price_bulk: n("price_bulk"),
       reorder_level: n("reorder_level"), reorder_qty: n("reorder_qty"),
       expiry_date: String(f.get("expiry_date") || "") || null,
@@ -76,15 +79,17 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       image_url: image,
       attributes: attrs,
     };
-    const initQty = n("init_qty");
+    const allowedRow = Object.fromEntries(Object.entries(row).filter(([key]) => canField(key) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(key) || canAction("prices.update")))) as Partial<typeof row>;
+    if (!p && !allowedRow.name) { toast.error("إضافة صنف تحتاج صلاحية الاسم"); return; }
+    const initQty = canField("quantity") && canAction("stocktake.adjust") ? n("init_qty") : 0;
     setBusy(true);
     if (p) {
-      const { error } = await supabase.from("products").update(row).eq("id", p.id);
+      const { error } = await supabase.from("products").update(allowedRow).eq("id", p.id);
       setBusy(false);
       if (error) { toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message); return; }
       toast.success("تم حفظ التعديلات");
     } else {
-      const { data, error } = await supabase.from("products").insert(row).select("id").single();
+      const { data, error } = await supabase.from("products").insert(allowedRow as typeof row).select("id").single();
       if (error) {
         setBusy(false);
         toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message);
@@ -103,22 +108,22 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
   return (
     <form onSubmit={submit} className="grid grid-cols-2 gap-3">
       <div className="col-span-2 flex gap-3 items-start">
-        <label className="relative size-24 shrink-0 rounded-lg border-2 border-dashed grid place-items-center cursor-pointer overflow-hidden bg-muted">
+        {canField("image_url") && <label className="relative size-24 shrink-0 rounded-lg border-2 border-dashed grid place-items-center cursor-pointer overflow-hidden bg-muted">
           {image ? <img src={image} alt="" className="size-full object-cover" /> : <ImagePlus className="size-7 text-muted-foreground" />}
           <input type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
           {image && (
             <button type="button" onClick={(e) => { e.preventDefault(); setImage(null); }} className="absolute top-1 left-1 rounded-full bg-card p-0.5" aria-label="حذف الصورة"><X className="size-3" /></button>
           )}
-        </label>
+        </label>}
         <div className="flex-1 space-y-2">
-          <div className="space-y-1"><Label>اسم الصنف *</Label><Input name="name" required defaultValue={p?.name} /></div>
+          {canField("name") && <div className="space-y-1"><Label>اسم الصنف *</Label><Input name="name" required defaultValue={p?.name} /></div>}
           {p && <div className="text-xs text-muted-foreground">الكود: <b dir="ltr">{p.code}</b> · الباركود الخاص: <b dir="ltr">{p.custom_barcode}</b></div>}
           {!p && <div className="text-xs text-muted-foreground">كود الصنف والباركود الخاص (628…) يتولدان تلقائياً عند الحفظ.</div>}
         </div>
       </div>
-      <div className="col-span-2 space-y-1"><Label>الوصف والمواصفات</Label><Textarea name="description" rows={2} defaultValue={p?.description ?? ""} /></div>
-      <div className="space-y-1"><Label>رقم الصنف / الموديل</Label><Input name="model_no" dir="ltr" defaultValue={p?.model_no ?? ""} /></div>
-      <div className="space-y-1">
+      {canField("description") && <div className="col-span-2 space-y-1"><Label>الوصف والمواصفات</Label><Textarea name="description" rows={2} defaultValue={p?.description ?? ""} /></div>}
+      {canField("model_no") && <div className="space-y-1"><Label>رقم الصنف / الموديل</Label><Input name="model_no" dir="ltr" defaultValue={p?.model_no ?? ""} /></div>}
+      {canField("barcode") && <div className="space-y-1">
         <Label>الباركود الأساسي (المصنع)</Label>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -127,31 +132,31 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
           </div>
           <BarcodeScanner onDetected={setCode} />
         </div>
-      </div>
-      <Pick label="القسم / الفئة" value={category} onChange={setCategory} items={categories.map((c) => [c.id, c.name])} />
-      <Pick label="المستودع الافتراضي" value={warehouse} onChange={setWarehouse} items={warehouses.map((w) => [w.id, w.name])} />
-      <div className="col-span-2 space-y-1"><Label>موقع الرف / الخزنة</Label><Input name="shelf" placeholder="مثال: رف A3، دولاب العرض 2" defaultValue={p?.shelf ?? ""} /></div>
-      <Pick label="الوحدة الأساسية" value={unit} onChange={setUnit} items={units.map((u) => [u.name, u.name])} allowNone={false} />
-      <Pick label="الوحدة الكبرى" value={major} onChange={setMajor} items={units.map((u) => [u.name, u.name])} />
-      <div className="space-y-1"><Label>سعة العبوة (كم وحدة أساسية)</Label><Input name="pack_capacity" type="number" min="1" step="any" defaultValue={p?.pack_capacity ?? 1} /></div>
-      <div className="space-y-1"><Label>تكلفة الشراء</Label><Input name="cost" type="number" step="0.01" min="0" defaultValue={p?.cost ?? ""} /></div>
+      </div>}
+      {canField("category_id") && <Pick label="القسم / الفئة" value={category} onChange={setCategory} items={categories.map((c) => [c.id, c.name])} />}
+      {canField("warehouse_id") && <Pick label="المستودع الافتراضي" value={warehouse} onChange={setWarehouse} items={warehouses.map((w) => [w.id, w.name])} />}
+      {canField("shelf") && <div className="col-span-2 space-y-1"><Label>موقع الرف / الخزنة</Label><Input name="shelf" placeholder="مثال: رف A3، دولاب العرض 2" defaultValue={p?.shelf ?? ""} /></div>}
+      {canField("unit") && <Pick label="الوحدة الأساسية" value={unit} onChange={setUnit} items={units.map((u) => [u.name, u.name])} allowNone={false} />}
+      {canField("major_unit") && <Pick label="الوحدة الكبرى" value={major} onChange={setMajor} items={units.map((u) => [u.name, u.name])} />}
+      {canField("pack_capacity") && <div className="space-y-1"><Label>سعة العبوة (كم وحدة أساسية)</Label><Input name="pack_capacity" type="number" min="1" step="any" defaultValue={p?.pack_capacity ?? 1} /></div>}
+      {canField("cost") && <div className="space-y-1"><Label>تكلفة الشراء</Label><Input disabled={!canAction("prices.update")} name="cost" type="number" step="0.01" min="0" defaultValue={p?.cost ?? ""} /></div>}
       <div className="col-span-2 grid grid-cols-2 sm:grid-cols-5 gap-2 rounded-lg bg-muted p-3">
-        {PRICE_TIERS.map((t) => (
-          <div key={t.key} className="space-y-1"><Label className="text-xs">{t.label}</Label><Input name={t.key} type="number" step="0.01" min="0" className="bg-card" defaultValue={p?.[t.key] ?? ""} /></div>
+        {PRICE_TIERS.filter(t => canField(t.key)).map((t) => (
+          <div key={t.key} className="space-y-1"><Label className="text-xs">{t.label}</Label><Input name={t.key} type="number" step="0.01" min="0" className="bg-card" disabled={!canAction("prices.update")} defaultValue={p?.[t.key] ?? ""} /></div>
         ))}
       </div>
-      <div className="space-y-1"><Label>حد الطلب (تنبيه النفاد)</Label><Input name="reorder_level" type="number" min="0" defaultValue={p?.reorder_level ?? ""} /></div>
-      <div className="space-y-1"><Label>كمية إعادة التوريد</Label><Input name="reorder_qty" type="number" min="0" defaultValue={p?.reorder_qty ?? ""} /></div>
-      <div className="space-y-1"><Label>تاريخ الانتهاء (اختياري)</Label><Input name="expiry_date" type="date" dir="ltr" defaultValue={p?.expiry_date ?? ""} /></div>
-      <div className="space-y-1"><Label>المورد</Label><Input name="supplier" placeholder="اسم المورد أو الشركة" defaultValue={p?.supplier ?? ""} /></div>
-      {!p && (
+      {canField("reorder_level") && <div className="space-y-1"><Label>حد الطلب (تنبيه النفاد)</Label><Input name="reorder_level" type="number" min="0" defaultValue={p?.reorder_level ?? ""} /></div>}
+      {canField("reorder_qty") && <div className="space-y-1"><Label>كمية إعادة التوريد</Label><Input name="reorder_qty" type="number" min="0" defaultValue={p?.reorder_qty ?? ""} /></div>}
+      {canField("expiry_date") && <div className="space-y-1"><Label>تاريخ الانتهاء (اختياري)</Label><Input name="expiry_date" type="date" dir="ltr" defaultValue={p?.expiry_date ?? ""} /></div>}
+      {canField("supplier") && <div className="space-y-1"><Label>المورد</Label><Input name="supplier" placeholder="اسم المورد أو الشركة" defaultValue={p?.supplier ?? ""} /></div>}
+      {!p && canField("quantity") && canAction("stocktake.adjust") && (
         <div className="space-y-1">
           <Label>الكمية الافتتاحية</Label>
           <Input name="init_qty" type="number" min="0" step="any" placeholder="0" />
           <p className="text-xs text-muted-foreground">تُسجل في المستودع الافتراضي المختار أعلاه كرصيد افتتاحي.</p>
         </div>
       )}
-      {fields.map((fd) => (
+      {visibleFields.map((fd) => (
         <div key={fd.id} className="space-y-1">
           <Label>{fd.name}</Label>
           {fd.kind === "select" && fd.options.length ? (

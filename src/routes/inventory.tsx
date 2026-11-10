@@ -111,7 +111,7 @@ function InventoryPage() {
         const existing = products.find((p) => (row.barcode && p.barcode === row.barcode) || (str(r["الكود"]) && p.code === str(r["الكود"])));
         const allowedRow = Object.fromEntries(Object.entries(row).filter(([k]) => canField(k) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(k) || canAction("prices.update"))));
         const { error } = existing
-          ? await supabase.from("products").update(allowedRow).eq("id", existing.id)
+          ? await supabase.from("products").update(allowedRow as Partial<typeof row>).eq("id", existing.id)
           : await supabase.from("products").insert(allowedRow as typeof row);
         if (error) toast.error(`${name}: ${error.message}`);
         else if (existing) updated++;

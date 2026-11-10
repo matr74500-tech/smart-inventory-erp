@@ -28,7 +28,7 @@ export function defaultPermissions(roles: string[]): PermissionSet {
   return {
     pages: PAGES.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["backup", "users"].includes(k) : ["dashboard", "inventory", "alerts", "labels", "catalog"].includes(k))),
     actions: ACTIONS.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["inventory.delete", "backup.manage"].includes(k) : ["inventory.export", "catalog.print", "labels.print"].includes(k))),
-    fields: FIELDS.map(([k]) => k).concat("attributes"),
+    fields: [...FIELDS.map(([k]) => k), "attributes"],
   };
 }
 export function isPermitted(roles: string[], permissions: PermissionSet | null, kind: keyof PermissionSet, key: string) {
