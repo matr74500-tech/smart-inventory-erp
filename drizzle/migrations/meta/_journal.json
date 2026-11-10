@@ -43,6 +43,13 @@
       "when": 1794280930934,
       "tag": "0005_complete_employee_field_enforcement",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794280977614,
+      "tag": "0006_allow_selected_custom_details",
+      "breakpoints": true
     }
   ]
 }
