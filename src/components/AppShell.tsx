@@ -20,6 +20,7 @@ import {
   Settings,
   Search,
   DatabaseBackup,
+  Trash2,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
@@ -39,7 +40,9 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
   { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
+  { to: "/cleanup", label: "حذف وتنظيف البيانات", icon: Trash2, roles: ["admin"] },
 ];
+const ADMIN_ONLY = ["/users", "/backup", "/cleanup"];
 
 export function AppShell({ title, roles, children }: { title: string; roles?: Role[]; children: ReactNode }) {
   const { session, loading, username, roles: myRoles, canPage, can, signOut } = useAuth();
@@ -59,7 +62,7 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
     );
   }
 
-  const allowed = canPage(pageForPath(location.pathname)) && (location.pathname !== "/users" && location.pathname !== "/backup" || !roles || can(...roles));
+  const allowed = canPage(pageForPath(location.pathname)) && (!ADMIN_ONLY.includes(location.pathname) || can("admin"));
 
   return (
     <div dir="rtl" className="min-h-screen md:flex print:block">
@@ -69,7 +72,7 @@ export function AppShell({ title, roles, children }: { title: string; roles?: Ro
           <div className="text-xs opacity-70">نقاط البيع وإدارة المخزون</div>
         </div>
         <nav className="flex md:flex-col gap-1 p-2 overflow-x-auto flex-1">
-          {NAV.filter((n) => canPage(pageForPath(n.to)) && (!["/users", "/backup"].includes(n.to) || can("admin"))).map((n) => (
+          {NAV.filter((n) => canPage(pageForPath(n.to)) && (!ADMIN_ONLY.includes(n.to) || can("admin"))).map((n) => (
             <Link
               key={n.to}
               to={n.to}

@@ -12,8 +12,9 @@ export type Unit = Tables<"units">;
 export type CustomField = Tables<"custom_fields">;
 export type Settings = Tables<"app_settings">;
 export type StockMin = Tables<"stock_minimums">;
+export type ShelfStock = Tables<"shelf_stock">;
 
-const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums"];
+const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums", "shelf_stock"];
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
@@ -27,11 +28,12 @@ export function useInventory() {
   const [fields, setFields] = useState<CustomField[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [minimums, setMinimums] = useState<StockMin[]>([]);
+  const [shelfStock, setShelfStock] = useState<ShelfStock[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!session || authLoading) return;
-    const [p, w, s, r, c, u, f, st, mn] = await Promise.all([
+    const [p, w, s, r, c, u, f, st, mn, sh] = await Promise.all([
       supabase.rpc("visible_products"),
       supabase.from("warehouses").select("*").order("created_at"),
       supabase.from("stock").select("*"),
@@ -41,6 +43,7 @@ export function useInventory() {
       supabase.from("custom_fields").select("*").order("created_at"),
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
       supabase.from("stock_minimums").select("*"),
+      supabase.from("shelf_stock").select("*"),
     ]);
     setProducts((p.data ?? []) as unknown as Product[]);
     setWarehouses(w.data ?? []);
@@ -51,6 +54,7 @@ export function useInventory() {
     setFields(f.data ?? []);
     setSettings(st.data ?? null);
     setMinimums(mn.data ?? []);
+    setShelfStock(sh.data ?? []);
     setLoading(false);
   }, [session?.user.id, authLoading]);
 
@@ -83,5 +87,5 @@ export function useInventory() {
 
   const categoryName = useCallback((id: string | null) => categories.find((c) => c.id === id)?.name ?? "", [categories]);
 
-  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, loading, qty, categoryName, reload: load };
+  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, shelfStock, loading, qty, categoryName, reload: load };
 }
