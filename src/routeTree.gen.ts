@@ -13,15 +13,19 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as BackupRouteImport } from './routes/backup'
 import { Route as CatalogRouteImport } from './routes/catalog'
+import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MovementsRouteImport } from './routes/movements'
 import { Route as PricesRouteImport } from './routes/prices'
 import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ReordersRouteImport } from './routes/reorders'
+import { Route as SalesRouteImport } from './routes/sales'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StocktakeRouteImport } from './routes/stocktake'
 import { Route as TransfersRouteImport } from './routes/transfers'
+import { Route as TrashRouteImport } from './routes/trash'
 import { Route as UsersRouteImport } from './routes/users'
 
 const IndexRoute = IndexRouteImport.update({
@@ -44,6 +48,11 @@ const CatalogRoute = CatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -57,6 +66,11 @@ const LabelsRoute = LabelsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovementsRoute = MovementsRouteImport.update({
+  id: '/movements',
+  path: '/movements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricesRoute = PricesRouteImport.update({
@@ -74,6 +88,11 @@ const ReordersRoute = ReordersRouteImport.update({
   path: '/reorders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SalesRoute = SalesRouteImport.update({
+  id: '/sales',
+  path: '/sales',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -89,6 +108,11 @@ const TransfersRoute = TransfersRouteImport.update({
   path: '/transfers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrashRoute = TrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -100,15 +124,19 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
+  '/customers': typeof CustomersRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
+  '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
+  '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/transfers': typeof TransfersRoute
+  '/trash': typeof TrashRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
@@ -116,15 +144,19 @@ export interface FileRoutesByTo {
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
+  '/customers': typeof CustomersRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
+  '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
+  '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/transfers': typeof TransfersRoute
+  '/trash': typeof TrashRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
@@ -133,15 +165,19 @@ export interface FileRoutesById {
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/catalog': typeof CatalogRoute
+  '/customers': typeof CustomersRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
+  '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
+  '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/transfers': typeof TransfersRoute
+  '/trash': typeof TrashRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
@@ -151,15 +187,19 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/backup'
     | '/catalog'
+    | '/customers'
     | '/inventory'
     | '/labels'
     | '/login'
+    | '/movements'
     | '/prices'
     | '/purchases'
     | '/reorders'
+    | '/sales'
     | '/settings'
     | '/stocktake'
     | '/transfers'
+    | '/trash'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -167,15 +207,19 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/backup'
     | '/catalog'
+    | '/customers'
     | '/inventory'
     | '/labels'
     | '/login'
+    | '/movements'
     | '/prices'
     | '/purchases'
     | '/reorders'
+    | '/sales'
     | '/settings'
     | '/stocktake'
     | '/transfers'
+    | '/trash'
     | '/users'
   id:
     | '__root__'
@@ -183,15 +227,19 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/backup'
     | '/catalog'
+    | '/customers'
     | '/inventory'
     | '/labels'
     | '/login'
+    | '/movements'
     | '/prices'
     | '/purchases'
     | '/reorders'
+    | '/sales'
     | '/settings'
     | '/stocktake'
     | '/transfers'
+    | '/trash'
     | '/users'
   fileRoutesById: FileRoutesById
 }
@@ -200,15 +248,19 @@ export interface RootRouteChildren {
   AlertsRoute: typeof AlertsRoute
   BackupRoute: typeof BackupRoute
   CatalogRoute: typeof CatalogRoute
+  CustomersRoute: typeof CustomersRoute
   InventoryRoute: typeof InventoryRoute
   LabelsRoute: typeof LabelsRoute
   LoginRoute: typeof LoginRoute
+  MovementsRoute: typeof MovementsRoute
   PricesRoute: typeof PricesRoute
   PurchasesRoute: typeof PurchasesRoute
   ReordersRoute: typeof ReordersRoute
+  SalesRoute: typeof SalesRoute
   SettingsRoute: typeof SettingsRoute
   StocktakeRoute: typeof StocktakeRoute
   TransfersRoute: typeof TransfersRoute
+  TrashRoute: typeof TrashRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -242,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory': {
       id: '/inventory'
       path: '/inventory'
@@ -261,6 +320,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movements': {
+      id: '/movements'
+      path: '/movements'
+      fullPath: '/movements'
+      preLoaderRoute: typeof MovementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prices': {
@@ -284,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReordersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sales': {
+      id: '/sales'
+      path: '/sales'
+      fullPath: '/sales'
+      preLoaderRoute: typeof SalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -305,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TransfersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trash': {
+      id: '/trash'
+      path: '/trash'
+      fullPath: '/trash'
+      preLoaderRoute: typeof TrashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -320,15 +400,19 @@ const rootRouteChildren: RootRouteChildren = {
   AlertsRoute: AlertsRoute,
   BackupRoute: BackupRoute,
   CatalogRoute: CatalogRoute,
+  CustomersRoute: CustomersRoute,
   InventoryRoute: InventoryRoute,
   LabelsRoute: LabelsRoute,
   LoginRoute: LoginRoute,
+  MovementsRoute: MovementsRoute,
   PricesRoute: PricesRoute,
   PurchasesRoute: PurchasesRoute,
   ReordersRoute: ReordersRoute,
+  SalesRoute: SalesRoute,
   SettingsRoute: SettingsRoute,
   StocktakeRoute: StocktakeRoute,
   TransfersRoute: TransfersRoute,
+  TrashRoute: TrashRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
