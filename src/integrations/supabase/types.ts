@@ -379,6 +379,45 @@ export type Database = {
           },
         ]
       }
+      shelf_stock: {
+        Row: {
+          product_id: string
+          quantity: number
+          shelf: string
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          product_id: string
+          quantity?: number
+          shelf: string
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          product_id?: string
+          quantity?: number
+          shelf?: string
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shelf_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shelf_stock_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock: {
         Row: {
           product_id: string
@@ -558,6 +597,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_purge: {
+        Args: { _scope: string; _warehouse?: string }
+        Returns: undefined
+      }
       can_manage_stock: { Args: { _user_id: string }; Returns: boolean }
       ean13: { Args: { _d12: string }; Returns: string }
       employee_can: {
@@ -586,6 +629,17 @@ export type Database = {
           _product: string
           _qty: number
           _warehouse: string
+        }
+        Returns: undefined
+      }
+      transfer_shelf_stock: {
+        Args: {
+          _from_shelf: string
+          _from_wh: string
+          _product: string
+          _qty: number
+          _to_shelf: string
+          _to_wh: string
         }
         Returns: undefined
       }
