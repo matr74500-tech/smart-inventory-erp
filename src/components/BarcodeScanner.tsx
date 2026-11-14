@@ -7,6 +7,11 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const idRef = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
+  const onDetectedRef = useRef(onDetected);
+
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
 
   useEffect(() => {
     if (!open) return;
@@ -14,24 +19,24 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
     let cancelled = false;
     setError(null);
     (async () => {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      await new Promise((r) => setTimeout(r, 50));
-      if (cancelled) return;
-      const s = new Html5Qrcode(idRef.current);
-      scanner = s;
       try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        await new Promise((r) => setTimeout(r, 50));
+        if (cancelled) return;
+        const s = new Html5Qrcode(idRef.current);
+        scanner = s;
         await s.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 260, height: 140 } },
           (text) => {
-            onDetected(text);
+            onDetectedRef.current(text);
             setOpen(false);
           },
           () => {},
         );
         if (cancelled && s.isScanning) s.stop().then(() => s.clear()).catch(() => {});
       } catch {
-        setError("تعذر تشغيل الكاميرا. تأكد من منح إذن الكاميرا.");
+        if (!cancelled) setError("تعذر تشغيل الكاميرا. تأكد من منح إذن الكاميرا.");
       }
     })();
     return () => {
@@ -48,7 +53,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
         // scanner already stopped or never started
       }
     };
-  }, [open, onDetected]);
+  }, [open]);
 
   return (
     <>

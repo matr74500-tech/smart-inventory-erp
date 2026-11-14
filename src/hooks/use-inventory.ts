@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export type Product = Tables<"products">;
 export type Warehouse = Tables<"warehouses">;
@@ -13,8 +14,10 @@ export type CustomField = Tables<"custom_fields">;
 export type Settings = Tables<"app_settings">;
 export type StockMin = Tables<"stock_minimums">;
 export type ShelfStock = Tables<"shelf_stock">;
+export type Currency = Tables<"currencies">;
+export type ExchangeRate = Tables<"exchange_rates">;
 
-const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums", "shelf_stock"];
+const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums", "shelf_stock", "currencies", "exchange_rates"];
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
@@ -29,11 +32,14 @@ export function useInventory() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [minimums, setMinimums] = useState<StockMin[]>([]);
   const [shelfStock, setShelfStock] = useState<ShelfStock[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(true);
+  const currencyErrorShown = useRef(false);
 
   const load = useCallback(async () => {
     if (!session || authLoading) return;
-    const [p, w, s, r, c, u, f, st, mn, sh] = await Promise.all([
+    const [p, w, s, r, c, u, f, st, mn, sh, cur, rates] = await Promise.all([
       supabase.rpc("visible_products"),
       supabase.from("warehouses").select("*").order("created_at"),
       supabase.from("stock").select("*"),
@@ -44,7 +50,16 @@ export function useInventory() {
       supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
       supabase.from("stock_minimums").select("*"),
       supabase.from("shelf_stock").select("*"),
+      supabase.from("currencies").select("*").order("code"),
+      supabase.from("exchange_rates").select("*").order("effective_at", { ascending: false }).order("created_at", { ascending: false }),
     ]);
+    const currencyError = cur.error ?? rates.error;
+    if (currencyError && !currencyErrorShown.current) {
+      toast.error(`تعذر تحميل العملات وأسعار الصرف: ${currencyError.message}`);
+      currencyErrorShown.current = true;
+    } else if (!currencyError) {
+      currencyErrorShown.current = false;
+    }
     setProducts((p.data ?? []) as unknown as Product[]);
     setWarehouses(w.data ?? []);
     setStock(s.data ?? []);
@@ -55,6 +70,8 @@ export function useInventory() {
     setSettings(st.data ?? null);
     setMinimums(mn.data ?? []);
     setShelfStock(sh.data ?? []);
+    setCurrencies(cur.data ?? []);
+    setExchangeRates(rates.data ?? []);
     setLoading(false);
   }, [session?.user.id, authLoading]);
 
@@ -87,5 +104,5 @@ export function useInventory() {
 
   const categoryName = useCallback((id: string | null) => categories.find((c) => c.id === id)?.name ?? "", [categories]);
 
-  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, shelfStock, loading, qty, categoryName, reload: load };
+  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, shelfStock, currencies, exchangeRates, loading, qty, categoryName, reload: load };
 }

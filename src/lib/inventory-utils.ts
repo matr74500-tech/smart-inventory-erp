@@ -2,6 +2,48 @@ import type { Tables } from "@/integrations/supabase/types";
 
 export type Product = Tables<"products">;
 
+export type MovementLogEntry = {
+  productId: string;
+  type: string;
+  qty: number;
+  at: string;
+  note: string;
+  user?: string;
+};
+
+const MOVEMENTS_STORAGE_KEY = "suhail_movements";
+
+function isMovementLogEntry(value: unknown): value is MovementLogEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry["productId"] === "string" &&
+    typeof entry["type"] === "string" &&
+    typeof entry["qty"] === "number" &&
+    Number.isFinite(entry["qty"]) &&
+    typeof entry["at"] === "string" &&
+    typeof entry["note"] === "string" &&
+    (entry["user"] === undefined || typeof entry["user"] === "string")
+  );
+}
+
+export function getMovements(): MovementLogEntry[] {
+  const stored = localStorage.getItem(MOVEMENTS_STORAGE_KEY);
+  if (stored === null) return [];
+
+  const entries: unknown = JSON.parse(stored);
+  if (!Array.isArray(entries) || !entries.every(isMovementLogEntry)) {
+    throw new TypeError("Stored movement log has an invalid format");
+  }
+  return entries;
+}
+
+export function logMovement(productId: string, type: string, qty: number, note: string): void {
+  const movements = getMovements();
+  movements.push({ productId, type, qty, at: new Date().toISOString(), note });
+  localStorage.setItem(MOVEMENTS_STORAGE_KEY, JSON.stringify(movements));
+}
+
 export const PRICE_TIERS = [
   { key: "price_special", label: "سعر خاص" },
   { key: "price", label: "تجزئة" },

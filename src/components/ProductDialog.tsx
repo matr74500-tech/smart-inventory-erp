@@ -47,6 +47,7 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
   const [warehouse, setWarehouse] = useState(p?.warehouse_id ?? NONE);
   const [unit, setUnit] = useState(p?.unit ?? units[0]?.name ?? "حبة");
   const [major, setMajor] = useState(p?.major_unit ?? NONE);
+  const [initialStocks, setInitialStocks] = useState<Record<string, string>>({});
   const [image, setImage] = useState<string | null>(p?.image_url ?? null);
   const [attrs, setAttrs] = useState<Record<string, string>>((p?.attributes as Record<string, string>) ?? {});
 
@@ -81,7 +82,10 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
     };
     const allowedRow = Object.fromEntries(Object.entries(row).filter(([key]) => (key === "attributes" ? visibleFields.length > 0 : canField(key)) && (!["cost", ...PRICE_TIERS.map(t => t.key)].includes(key) || canAction("prices.update")))) as Partial<typeof row>;
     if (!p && !allowedRow.name) { toast.error("إضافة صنف تحتاج صلاحية الاسم"); return; }
-    const initQty = canField("quantity") && canAction("stocktake.adjust") ? n("init_qty") : 0;
+    const initialBalances = canField("quantity") && canAction("stocktake.adjust")
+      ? warehouses.map((item) => ({ warehouse_id: item.id, quantity: Number(initialStocks[item.id] || 0) }))
+        .filter((item) => Number.isFinite(item.quantity) && item.quantity > 0)
+      : [];
     setBusy(true);
     if (p) {
       delete allowedRow.attributes;
@@ -100,9 +104,13 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
         toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message);
         return;
       }
-      if (initQty > 0 && warehouse !== NONE && data) {
-        const { error: stockErr } = await supabase.rpc("set_stock", { _product: data.id, _warehouse: warehouse, _qty: initQty, _kind: "رصيد افتتاحي" });
-        if (stockErr) toast.error(`أضيف الصنف لكن تعذر تسجيل الكمية: ${stockErr.message}`);
+      if (initialBalances.length > 0 && data) {
+        const { error: stockErr } = await supabase.rpc("set_initial_stocks", { _product: data.id, _balances: initialBalances });
+        if (stockErr) {
+          setBusy(false);
+          toast.error(`أُضيف الصنف لكن تعذر تسجيل الأرصدة الافتتاحية: ${stockErr.message}`);
+          return;
+        }
       }
       setBusy(false);
       toast.success("تمت إضافة الصنف");
@@ -155,10 +163,19 @@ function ProductForm({ onOpenChange, product, barcode, categories, warehouses, u
       {canField("expiry_date") && <div className="space-y-1"><Label>تاريخ الانتهاء (اختياري)</Label><Input name="expiry_date" type="date" dir="ltr" defaultValue={p?.expiry_date ?? ""} /></div>}
       {canField("supplier") && <div className="space-y-1"><Label>المورد</Label><Input name="supplier" placeholder="اسم المورد أو الشركة" defaultValue={p?.supplier ?? ""} /></div>}
       {!p && canField("quantity") && canAction("stocktake.adjust") && (
-        <div className="space-y-1">
-          <Label>الكمية الافتتاحية</Label>
-          <Input name="init_qty" type="number" min="0" step="any" placeholder="0" />
-          <p className="text-xs text-muted-foreground">تُسجل في المستودع الافتراضي المختار أعلاه كرصيد افتتاحي.</p>
+        <div className="col-span-2 space-y-2">
+          <Label>الرصيد الافتتاحي في كل مستودع</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {warehouses.map((item) => (
+              <div key={item.id} className="space-y-1">
+                <Label htmlFor={`initial-stock-${item.id}`} className="text-xs">{item.name}</Label>
+                <Input id={`initial-stock-${item.id}`} type="number" min="0" step="any" placeholder="0"
+                  value={initialStocks[item.id] ?? ""}
+                  onChange={(event) => setInitialStocks((values) => ({ ...values, [item.id]: event.target.value }))} />
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">يُسجل كل رصيد افتتاحي كحركة مخزون مستقلة للمستودع المختار.</p>
         </div>
       )}
       {visibleFields.map((fd) => (

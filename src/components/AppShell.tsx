@@ -21,6 +21,7 @@ import {
   Search,
   DatabaseBackup,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
@@ -30,6 +31,10 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/", label: "الرئيسية", icon: LayoutDashboard },
   { to: "/inventory", label: "الأصناف والمخزون", icon: Boxes },
   { to: "/purchases", label: "فاتورة مشتريات", icon: ShoppingCart, roles: ["storekeeper"] },
+  { to: "/sales", label: "المبيعات", icon: ShoppingCart, roles: ["storekeeper", "cashier"] },
+  { to: "/customers", label: "العملاء", icon: Users, roles: ["storekeeper", "cashier"] },
+  { to: "/cash", label: "الصندوق والإقفال", icon: Wallet, roles: ["storekeeper", "cashier"] },
+  { to: "/reports", label: "التقارير", icon: FileText, roles: ["storekeeper"] },
   { to: "/prices", label: "تحديث الأسعار", icon: BadgeDollarSign, roles: ["storekeeper"] },
   { to: "/alerts", label: "تنبيهات المخزون", icon: Bell },
   { to: "/labels", label: "ملصقات الباركود", icon: Tags },
@@ -37,6 +42,8 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/stocktake", label: "الجرد والإدخال", icon: ClipboardCheck, roles: ["storekeeper"] },
   { to: "/transfers", label: "التحويلات", icon: ArrowLeftRight, roles: ["storekeeper"] },
   { to: "/reorders", label: "التوريد", icon: Truck, roles: ["storekeeper"] },
+  { to: "/suppliers", label: "الموردون", icon: Truck, roles: ["storekeeper"] },
+  { to: "/purchase_orders", label: "أوامر الشراء", icon: ShoppingCart, roles: ["storekeeper"] },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
   { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },

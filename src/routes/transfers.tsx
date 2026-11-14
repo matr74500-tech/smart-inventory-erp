@@ -27,22 +27,50 @@ export const Route = createFileRoute("/transfers")({
 
 function TransfersPage() {
   const { canAction, canField } = useAuth();
-  const { products, warehouses, qty } = useInventory();
+  const { products, warehouses, qty, shelfStock } = useInventory();
   const [product, setProduct] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [fromShelf, setFromShelf] = useState("");
+  const [toShelf, setToShelf] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
+  const assignedAtSource = shelfStock
+    .filter((row) => row.product_id === product && row.warehouse_id === from)
+    .reduce((sum, row) => sum + Number(row.quantity), 0);
+  const availableAtSource = fromShelf.trim()
+    ? Number(shelfStock.find((row) => row.product_id === product && row.warehouse_id === from && row.shelf === fromShelf.trim())?.quantity ?? 0)
+    : Math.max(0, qty(product, from) - assignedAtSource);
 
   async function submit(e: FormEvent) {
-    if (!canAction("transfers.post")) return;
     e.preventDefault();
+    if (!canAction("transfers.post")) return;
+    if (!product || !from || !to || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      toast.error("أكمل بيانات الصنف والمستودعات والكمية");
+      return;
+    }
+    if (from === to && fromShelf.trim() === toShelf.trim()) {
+      toast.error("اختر رفًا مختلفًا أو مستودعًا مختلفًا");
+      return;
+    }
     setBusy(true);
-    const { error } = await supabase.rpc("transfer_stock", { _product: product, _from: from, _to: to, _qty: Number(amount) });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("تم التحويل");
-    setAmount("");
+    try {
+      const { error } = await supabase.rpc("transfer_shelf_stock", {
+        _product: product,
+        _from_wh: from,
+        _from_shelf: fromShelf.trim(),
+        _to_wh: to,
+        _to_shelf: toShelf.trim(),
+        _qty: Number(amount),
+      });
+      if (error) throw error;
+      toast.success("تم تحويل الكمية بين الرفوف");
+      setAmount("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر تنفيذ التحويل");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!canField("quantity")) return <AppShell title="التحويلات"><p>عرض هذه الشاشة يحتاج صلاحية الكميات.</p></AppShell>;
@@ -50,9 +78,10 @@ function TransfersPage() {
   return (
     <AppShell title="التحويلات المخزنية" roles={["storekeeper"]}>
       <form onSubmit={submit} className="rounded-xl bg-card shadow-card p-6 grid gap-4 max-w-xl">
+        <p className="text-sm text-muted-foreground">يمكنك نقل الكمية بين رفوف المستودع نفسه أو بين مستودعين. اترك الرف فارغًا لاستخدام الكمية غير الموزعة على رف.</p>
         <div className="space-y-1">
           <Label>الصنف</Label>
-          <Select value={product} onValueChange={setProduct}>
+          <Select value={product} onValueChange={(value) => { setProduct(value); setFromShelf(""); setToShelf(""); }}>
             <SelectTrigger><SelectValue placeholder="اختر الصنف" /></SelectTrigger>
             <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
@@ -60,7 +89,7 @@ function TransfersPage() {
         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
           <div className="space-y-1">
             <Label>من</Label>
-            <Select value={from} onValueChange={setFrom}>
+            <Select value={from} onValueChange={(value) => { setFrom(value); setFromShelf(""); }}>
               <SelectTrigger><SelectValue placeholder="المصدر" /></SelectTrigger>
               <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
             </Select>
@@ -74,7 +103,17 @@ function TransfersPage() {
             </Select>
           </div>
         </div>
-        {product && from && <p className="text-sm text-muted-foreground">المتوفر في المصدر: {qty(product, from)}</p>}
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label>رف المصدر</Label>
+            <Input value={fromShelf} onChange={(e) => setFromShelf(e.target.value)} placeholder="اتركه فارغًا للكمية غير الموزعة" />
+          </div>
+          <div className="space-y-1">
+            <Label>رف الوجهة</Label>
+            <Input value={toShelf} onChange={(e) => setToShelf(e.target.value)} placeholder="اختياري" />
+          </div>
+        </div>
+        {product && from && <p className="text-sm text-muted-foreground">المتوفر في المصدر{fromShelf.trim() ? ` على رف ${fromShelf.trim()}` : " غير الموزع على الرفوف"}: {availableAtSource}</p>}
         <div className="space-y-1"><Label>الكمية</Label><Input type="number" min="0.01" step="any" value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
         <Button type="submit" disabled={!canAction("transfers.post") || !canField("quantity") || busy || !product || !from || !to}>{busy && <Loader2 className="size-4 animate-spin" />} تنفيذ التحويل</Button>
       </form>

@@ -28,8 +28,8 @@ export const Route = createFileRoute("/labels")({
   component: LabelsPage,
 });
 
-type TextOpt = "none" | "shop" | "name" | "price" | "code";
-const TEXT_LABELS: Record<TextOpt, string> = { none: "بدون", shop: "اسم المحل", name: "اسم الصنف", price: "السعر", code: "كود الصنف" };
+type TextOpt = "none" | "shop" | "phone" | "name" | "price" | "code";
+const TEXT_LABELS: Record<TextOpt, string> = { none: "بدون", shop: "اسم المحل", phone: "رقم التواصل", name: "اسم الصنف", price: "السعر", code: "كود الصنف" };
 const LAYOUTS = {
   a4_3: { label: "ورق A4 — 3 أعمدة (24 ملصق)", page: "A4", cols: 3, w: "64mm", h: "34mm" },
   a4_4: { label: "ورق A4 — 4 أعمدة (40 ملصق)", page: "A4", cols: 4, w: "48mm", h: "27mm" },
@@ -57,7 +57,7 @@ function LabelsPage() {
   const labels = products.flatMap((p) => Array.from({ length: sel[p.id] ?? 0 }, () => p));
 
   const text = (o: TextOpt, p: (typeof products)[number]) =>
-    o === "shop" ? settings?.shop_name ?? "" : o === "name" ? p.name : o === "price" ? (canField(tier) ? `${Number(p[tier])} ر.ي` : "") : o === "code" ? p.code ?? "" : "";
+    o === "shop" ? settings?.shop_name ?? "" : o === "phone" ? settings?.phone ?? "" : o === "name" ? p.name : o === "price" ? (canField(tier) ? `${Number(p[tier])} ر.ي` : "") : o === "code" ? p.code ?? "" : "";
   const setCount = (id: string, n: number) => setSel((s) => { const c = { ...s }; if (n <= 0) delete c[id]; else c[id] = n; return c; });
 
   function print() {
