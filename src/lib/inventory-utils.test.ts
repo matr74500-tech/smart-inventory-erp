@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { adjustPrice, countDiff, expiryStatus, ean13, isValidEan13, toBaseQty } from "./inventory-utils";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  adjustPrice,
+  countDiff,
+  expiryStatus,
+  ean13,
+  getMovements,
+  isValidEan13,
+  logMovement,
+  toBaseQty,
+} from "./inventory-utils";
 
 describe("inventory rules", () => {
   it("generated barcodes start with 628 and carry a valid EAN-13 check digit", () => {
@@ -26,5 +35,29 @@ describe("inventory rules", () => {
     expect(countDiff(10, 12).label).toBe("زيادة");
     expect(countDiff(10, 7)).toEqual({ diff: -3, label: "نقص" });
     expect(countDiff(5, 5).label).toBe("مطابق");
+  });
+});
+
+describe("movement log", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("persists movement entries for the audit screen", () => {
+    logMovement("product-1", "مبيعات", 2, "فاتورة مبيعات");
+
+    expect(getMovements()).toEqual([
+      {
+        productId: "product-1",
+        type: "مبيعات",
+        qty: 2,
+        at: expect.any(String),
+        note: "فاتورة مبيعات",
+      },
+    ]);
+  });
+
+  it("rejects malformed stored movement data", () => {
+    localStorage.setItem("suhail_movements", JSON.stringify([{ productId: 1 }]));
+
+    expect(() => getMovements()).toThrow("Stored movement log has an invalid format");
   });
 });

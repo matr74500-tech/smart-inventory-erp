@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Printer, Search, Minus, Plus } from "lucide-react";
@@ -27,8 +28,8 @@ export const Route = createFileRoute("/labels")({
   component: LabelsPage,
 });
 
-type TextOpt = "none" | "shop" | "name" | "price" | "code";
-const TEXT_LABELS: Record<TextOpt, string> = { none: "بدون", shop: "اسم المحل", name: "اسم الصنف", price: "السعر", code: "كود الصنف" };
+type TextOpt = "none" | "shop" | "phone" | "name" | "price" | "code";
+const TEXT_LABELS: Record<TextOpt, string> = { none: "بدون", shop: "اسم المحل", phone: "رقم التواصل", name: "اسم الصنف", price: "السعر", code: "كود الصنف" };
 const LAYOUTS = {
   a4_3: { label: "ورق A4 — 3 أعمدة (24 ملصق)", page: "A4", cols: 3, w: "64mm", h: "34mm" },
   a4_4: { label: "ورق A4 — 4 أعمدة (40 ملصق)", page: "A4", cols: 4, w: "48mm", h: "27mm" },
@@ -40,6 +41,7 @@ const LAYOUTS = {
 type LayoutKey = keyof typeof LAYOUTS;
 
 function LabelsPage() {
+  const { canAction, canField } = useAuth();
   const { products, settings } = useInventory();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Record<string, number>>({});
@@ -55,10 +57,11 @@ function LabelsPage() {
   const labels = products.flatMap((p) => Array.from({ length: sel[p.id] ?? 0 }, () => p));
 
   const text = (o: TextOpt, p: (typeof products)[number]) =>
-    o === "shop" ? settings?.shop_name ?? "" : o === "name" ? p.name : o === "price" ? `${Number(p[tier])} ر.ي` : o === "code" ? p.code ?? "" : "";
+    o === "shop" ? settings?.shop_name ?? "" : o === "phone" ? settings?.phone ?? "" : o === "name" ? p.name : o === "price" ? (canField(tier) ? `${Number(p[tier])} ر.ي` : "") : o === "code" ? p.code ?? "" : "";
   const setCount = (id: string, n: number) => setSel((s) => { const c = { ...s }; if (n <= 0) delete c[id]; else c[id] = n; return c; });
 
   function print() {
+    if (!canAction("labels.print")) return;
     const style = document.createElement("style");
     style.textContent = `@page { size: ${L.page}; margin: ${L.cols > 1 ? "8mm 5mm" : "0"}; }`;
     document.head.appendChild(style);
@@ -72,6 +75,8 @@ function LabelsPage() {
         <SelectContent>{(Object.keys(TEXT_LABELS) as TextOpt[]).map((k) => <SelectItem key={k} value={k}>{TEXT_LABELS[k]}</SelectItem>)}</SelectContent></Select>
     </div>
   );
+
+  if (!canField("barcode") && !canField("custom_barcode")) return <AppShell title="الملصقات"><p>طباعة الملصقات تحتاج صلاحية الباركود.</p></AppShell>;
 
   return (
     <AppShell title="طباعة ملصقات الباركود">
@@ -115,14 +120,14 @@ function LabelsPage() {
             <Opt label="النص تحت الباركود" value={bottom} onChange={setBottom} />
             <div className="space-y-1"><Label>شريحة السعر</Label>
               <Select value={tier} onValueChange={(v) => setTier(v as PriceKey)}><SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{PRICE_TIERS.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent></Select>
+                <SelectContent>{PRICE_TIERS.filter(t => canField(t.key)).map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent></Select>
             </div>
             <div className="space-y-1 sm:col-span-2"><Label>الباركود المطبوع</Label>
               <Select value={source} onValueChange={(v) => setSource(v as "auto" | "custom")}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="auto">باركود المصنع (أو الخاص إن لم يوجد)</SelectItem><SelectItem value="custom">الباركود الخاص 628 دائماً</SelectItem></SelectContent></Select>
             </div>
           </div>
-          <Button className="w-full h-11" disabled={!labels.length} onClick={print}><Printer className="size-4" /> طباعة {labels.length} ملصق</Button>
+          <Button className="w-full h-11" disabled={!canAction("labels.print") || !labels.length} onClick={print}><Printer className="size-4" /> طباعة {labels.length} ملصق</Button>
           <p className="text-xs text-muted-foreground">يمكنك اختيار "حفظ بصيغة PDF" من نافذة الطباعة. للطابعة الحرارية اضبط حجم الورق في إعدادات الطابعة بنفس المقاس.</p>
         </div>
       </div>

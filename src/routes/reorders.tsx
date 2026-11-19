@@ -1,3 +1,4 @@
+import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PackageCheck, Loader2, Truck } from "lucide-react";
@@ -14,18 +15,22 @@ export const Route = createFileRoute("/reorders")({
       { name: "description", content: "طلبات إعادة التوريد التلقائية عند وصول الصنف لحد الطلب." },
       { property: "og:title", content: "طلبات التوريد | سهيل سوفت" },
       { property: "og:description", content: "إدارة إعادة التوريد واستلام البضاعة." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ReordersPage,
 });
 
 function ReordersPage() {
+  const { canAction, canField } = useAuth();
   const { reorders, products, warehouses } = useInventory();
   const [busy, setBusy] = useState<string | null>(null);
   const pName = (id: string) => products.find((p) => p.id === id)?.name ?? "—";
   const wName = (id: string) => warehouses.find((w) => w.id === id)?.name ?? "—";
 
   async function receive(id: string) {
+    if (!canAction("reorders.receive")) return;
     setBusy(id);
     const { error } = await supabase.rpc("receive_reorder", { _id: id });
     setBusy(null);
@@ -45,7 +50,7 @@ function ReordersPage() {
               <div className="text-xs text-muted-foreground">{wName(r.warehouse_id)} · الكمية المطلوبة: {Number(r.quantity)}</div>
             </div>
             {r.status === "pending" ? (
-              <Button size="sm" onClick={() => receive(r.id)} disabled={busy === r.id}>
+              <Button size="sm" onClick={() => receive(r.id)} disabled={!canAction("reorders.receive") || busy === r.id}>
                 {busy === r.id ? <Loader2 className="size-4 animate-spin" /> : <PackageCheck className="size-4" />} استلام
               </Button>
             ) : (

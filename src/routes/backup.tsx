@@ -26,7 +26,7 @@ type Row = { id: string; created_at: string; size_bytes: number };
 async function collect() {
   const out: Record<string, unknown[]> = {};
   for (const t of TABLES) {
-    const { data, error } = await supabase.from(t).select("*").limit(100000);
+    const { data, error } = await (t === "products" ? supabase.rpc("visible_products") : supabase.from(t).select("*").limit(100000));
     if (error) throw error;
     out[t] = data ?? [];
   }

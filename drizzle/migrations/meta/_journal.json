@@ -36,6 +36,55 @@
       "when": 1794184615758,
       "tag": "0004_employee_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794280930934,
+      "tag": "0005_complete_employee_field_enforcement",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794280977614,
+      "tag": "0006_allow_selected_custom_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794421571285,
+      "tag": "0007_shelf_transfers_and_admin_purge",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794622000000,
+      "tag": "0008_currencies_exchange_rates",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794622500000,
+      "tag": "0009_customer_activity_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794623000000,
+      "tag": "0010_sales_customers_cash",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794624000000,
+      "tag": "0011_suppliers_purchase_orders",
+      "breakpoints": true
     }
   ]
 }

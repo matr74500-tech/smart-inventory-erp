@@ -14,4 +14,12 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+
+  it("matches the cleanup page linked from the admin sidebar", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    const matches = router.matchRoutes("/cleanup");
+
+    expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
+  });
 });

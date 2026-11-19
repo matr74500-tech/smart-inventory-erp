@@ -2,7 +2,9 @@ export const PAGES = [
   ["dashboard", "الرئيسية"], ["inventory", "الأصناف والمخزون"], ["purchases", "المشتريات"],
   ["prices", "تحديث الأسعار"], ["alerts", "التنبيهات"], ["labels", "ملصقات الباركود"],
   ["catalog", "الكتالوج"], ["stocktake", "الجرد"], ["transfers", "التحويلات"],
-  ["reorders", "التوريد"], ["settings", "الإعدادات"], ["backup", "النسخ الاحتياطي"], ["users", "المستخدمون"],
+  ["reorders", "التوريد"], ["sales", "المبيعات"], ["customers", "العملاء"], ["cash", "الصندوق"],
+  ["reports", "التقارير"], ["suppliers", "الموردون"], ["purchase_orders", "أوامر الشراء"],
+  ["settings", "الإعدادات"], ["backup", "النسخ الاحتياطي"], ["users", "المستخدمون"],
 ] as const;
 export const ACTIONS = [
   ["inventory.create", "إضافة صنف"], ["inventory.edit", "تعديل صنف"], ["inventory.delete", "حذف صنف"],
@@ -10,6 +12,9 @@ export const ACTIONS = [
   ["prices.update", "تغيير الأسعار والتكلفة"], ["purchases.post", "اعتماد المشتريات"],
   ["stocktake.adjust", "اعتماد الجرد والرصيد الافتتاحي"], ["transfers.post", "تنفيذ تحويل"],
   ["reorders.receive", "استلام توريد"], ["settings.manage", "تعديل الإعدادات"],
+  ["sales.draft", "حفظ مسودة بيع"], ["sales.post", "ترحيل فاتورة بيع"], ["sales.override_price", "تعديل سعر البيع"],
+  ["customers.manage", "إدارة العملاء"], ["cash.manage", "إدارة سندات الصندوق"], ["cash.close", "إقفال الصندوق"],
+  ["reports.view", "عرض التقارير"], ["suppliers.manage", "إدارة الموردين"], ["purchase_orders.manage", "إدارة أوامر الشراء"],
   ["catalog.print", "طباعة الكتالوج"], ["labels.print", "طباعة الملصقات"], ["backup.manage", "إنشاء واستعادة النسخ الاحتياطية"],
 ] as const;
 export const FIELDS = [
@@ -26,9 +31,9 @@ export type PermissionSet = { pages: string[]; actions: string[]; fields: string
 export function defaultPermissions(roles: string[]): PermissionSet {
   const manager = roles.includes("storekeeper") || roles.includes("admin");
   return {
-    pages: PAGES.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["backup", "users"].includes(k) : ["dashboard", "inventory", "alerts", "labels", "catalog"].includes(k))),
-    actions: ACTIONS.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["inventory.delete", "backup.manage"].includes(k) : ["inventory.export", "catalog.print", "labels.print"].includes(k))),
-    fields: FIELDS.map(([k]) => k).concat("attributes"),
+    pages: PAGES.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["backup", "users"].includes(k) : ["dashboard", "inventory", "alerts", "labels", "catalog", "sales", "customers", "cash"].includes(k))),
+    actions: ACTIONS.map(([k]) => k).filter(k => roles.includes("admin") || (manager ? !["inventory.delete", "backup.manage"].includes(k) : ["inventory.export", "catalog.print", "labels.print", "sales.draft", "sales.post", "customers.manage", "cash.manage"].includes(k))),
+    fields: [...FIELDS.map(([k]) => k), "attributes"],
   };
 }
 export function isPermitted(roles: string[], permissions: PermissionSet | null, kind: keyof PermissionSet, key: string) {

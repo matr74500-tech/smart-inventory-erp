@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, ClipboardCheck, ArrowLeftRight, Truck, Search, AlertTriangle, Warehouse, Package } from "lucide-react";
+import { Boxes, ClipboardCheck, ArrowLeftRight, Truck, Search, AlertTriangle, Warehouse, Package, ShoppingCart, FileText, Receipt } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useInventory } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
@@ -29,7 +29,7 @@ const TILES = [
 
 function Dashboard() {
   const { products, warehouses, reorders, qty } = useInventory();
-  const { canPage, canField } = useAuth();
+  const { canPage, canField, can } = useAuth();
   const low = products.filter((p) => Number(p.reorder_level) > 0 && qty(p.id) <= Number(p.reorder_level));
   const pending = reorders.filter((r) => r.status === "pending").length;
 
@@ -60,6 +60,25 @@ function Dashboard() {
           </Link>
         ))}
       </div>
+      {can("admin") && (
+        <section className="mt-8">
+          <h2 className="mb-3 font-bold">اختصارات العمليات</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link to="/sales" search={{ view: "pos" }} className="rounded-xl bg-card p-4 shadow-card hover:bg-accent">
+              <ShoppingCart className="size-5 text-primary" /><div className="mt-2 font-semibold">البيع السريع</div>
+            </Link>
+            <Link to="/sales" search={{ view: "invoice" }} className="rounded-xl bg-card p-4 shadow-card hover:bg-accent">
+              <FileText className="size-5 text-primary" /><div className="mt-2 font-semibold">فاتورة بيع جديدة</div>
+            </Link>
+            <Link to="/customers" search={{ voucher: "receipt" }} className="rounded-xl bg-card p-4 shadow-card hover:bg-accent">
+              <Receipt className="size-5 text-success" /><div className="mt-2 font-semibold">سند قبض</div>
+            </Link>
+            <Link to="/customers" search={{ voucher: "payment" }} className="rounded-xl bg-card p-4 shadow-card hover:bg-accent">
+              <Receipt className="size-5 text-destructive" /><div className="mt-2 font-semibold">سند صرف</div>
+            </Link>
+          </div>
+        </section>
+      )}
       {canField("quantity") && canField("reorder_level") && low.length > 0 && (
         <div className="mt-8 rounded-xl bg-card shadow-card p-5">
           <h2 className="font-bold mb-3 flex items-center gap-2"><AlertTriangle className="size-5 text-warning" /> أصناف وصلت لحد الطلب</h2>
