@@ -4,7 +4,7 @@ import { User, Lock, Loader2, LogIn, UserPlus, Store } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { usernameToEmail } from "@/lib/arabic";
+import { loginIdentifierToEmail, usernameToEmail } from "@/lib/arabic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,22 +37,50 @@ function LoginPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!/^[a-zA-Z0-9._-]{3,}$/.test(username.trim())) {
-      toast.error("اسم المستخدم يجب أن يكون 3 أحرف إنجليزية أو أرقام على الأقل");
+    const identity = username.trim();
+    const isEmail = identity.includes("@");
+    const isValidIdentity =
+      mode === "in" && isEmail
+        ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity)
+        : /^[a-zA-Z0-9._-]{3,}$/.test(identity);
+    if (!isValidIdentity) {
+      toast.error(
+        mode === "in"
+          ? "أدخل اسم مستخدم صحيحًا أو بريدًا إلكترونيًا صحيحًا"
+          : "اسم المستخدم يجب أن يكون 3 أحرف إنجليزية أو أرقام على الأقل",
+      );
       return;
     }
     setBusy(true);
-    const email = usernameToEmail(username);
-    const { error } =
-      mode === "in"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { username: username.trim().toLowerCase() }, emailRedirectTo: window.location.origin },
-          });
-    setBusy(false);
-    if (error) toast.error(mode === "in" ? "اسم المستخدم أو كلمة المرور غير صحيحة" : error.message);
+    try {
+      const email = mode === "in" ? loginIdentifierToEmail(identity) : usernameToEmail(identity);
+      const { error } =
+        mode === "in"
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                data: { username: identity.toLowerCase() },
+                emailRedirectTo: window.location.origin,
+              },
+            });
+      if (error) {
+        if (mode === "in" && error.code === "invalid_credentials") {
+          toast.error("البريد الإلكتروني أو اسم المستخدم أو كلمة المرور غير صحيحة");
+        } else {
+          toast.error(`تعذر ${mode === "in" ? "تسجيل الدخول" : "إنشاء الحساب"}: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `تعذر الاتصال بخدمة تسجيل الدخول: ${error.message}`
+          : "تعذر الاتصال بخدمة تسجيل الدخول. تحقق من الإنترنت وحاول مجددًا.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -62,7 +90,11 @@ function LoginPage() {
           <Store className="size-8" /> سهيل سوفت
         </div>
         <div>
-          <h2 className="text-4xl font-bold leading-tight">مخزونك تحت السيطرة،<br />لحظة بلحظة.</h2>
+          <h2 className="text-4xl font-bold leading-tight">
+            مخزونك تحت السيطرة،
+            <br />
+            لحظة بلحظة.
+          </h2>
           <p className="mt-4 opacity-80">جرد، تحويلات، توريد، وبحث ذكي بالباركود — في مكان واحد.</p>
         </div>
         <div className="text-sm opacity-60">© SuhailSoft</div>
@@ -74,27 +106,57 @@ function LoginPage() {
             <p className="text-muted-foreground mt-1">أدخل اسم المستخدم وكلمة المرور</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="u">اسم المستخدم</Label>
+            <Label htmlFor="u">اسم المستخدم أو البريد الإلكتروني</Label>
             <div className="relative">
               <User className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input id="u" dir="ltr" className="pr-10 h-11 text-right" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
+              <Input
+                id="u"
+                dir="ltr"
+                className="pr-10 h-11 text-right"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="p">كلمة المرور</Label>
             <div className="relative">
               <Lock className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input id="p" type="password" dir="ltr" className="pr-10 h-11 text-right" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} required />
+              <Input
+                id="p"
+                type="password"
+                dir="ltr"
+                className="pr-10 h-11 text-right"
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "in" ? "current-password" : "new-password"}
+                required
+              />
             </div>
           </div>
           <Button type="submit" className="w-full h-11" disabled={busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : mode === "in" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : mode === "in" ? (
+              <LogIn className="size-4" />
+            ) : (
+              <UserPlus className="size-4" />
+            )}
             {mode === "in" ? "دخول" : "إنشاء الحساب"}
           </Button>
-          <button type="button" className="w-full text-sm text-primary hover:underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+          <button
+            type="button"
+            className="w-full text-sm text-primary hover:underline"
+            onClick={() => setMode(mode === "in" ? "up" : "in")}
+          >
             {mode === "in" ? "ليس لديك حساب؟ أنشئ حساباً" : "لديك حساب؟ سجّل الدخول"}
           </button>
-          <p className="text-xs text-muted-foreground text-center">أول حساب يُنشأ يصبح مديراً، والبقية بصلاحية بائع حتى يغيّرها المدير.</p>
+          <p className="text-xs text-muted-foreground text-center">
+            أول حساب يُنشأ يصبح مديراً، والبقية بصلاحية بائع حتى يغيّرها المدير.
+          </p>
         </form>
       </div>
     </div>

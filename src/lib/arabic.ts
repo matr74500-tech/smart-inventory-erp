@@ -19,4 +19,12 @@ export function matchesSearch(haystack: (string | null | undefined)[], query: st
 }
 
 export const usernameToEmail = (u: string) =>
-  `${u.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "")}@users.suhailsoft.app`;
+  `${u
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "")}@users.suhailsoft.app`;
+
+export const loginIdentifierToEmail = (value: string) => {
+  const identifier = value.trim();
+  return identifier.includes("@") ? identifier.toLowerCase() : usernameToEmail(identifier);
+};
