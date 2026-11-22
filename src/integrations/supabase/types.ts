@@ -1213,6 +1213,7 @@ export type Database = {
       };
       save_payment_plan: {
         Args: {
+          _id: string;
           _customer_id: string;
           _due_date: string;
           _installments_count: number;

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { syncPending } from "./sync";
 import { getQueue } from "./store";
+import { getRpcQueue } from "./rpc-queue";
+import { syncQueuedRpc } from "./rpc-sync";
 import { toast } from "sonner";
 
 export function useOfflineSync() {
@@ -8,31 +10,35 @@ export function useOfflineSync() {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    const update = () => {
+    const update = async () => {
       setOnline(navigator.onLine);
-      setPendingCount(getQueue().length);
+      setPendingCount(getQueue().length + (await getRpcQueue()).length);
     };
-    update();
+    void update();
     const handleOnline = async () => {
-      update();
+      await update();
       const res = await syncPending();
+      const rpcRes = await syncQueuedRpc();
       if ("errors" in res && res.errors.length > 0) {
         toast.error(
           `تمت مزامنة ${res.synced} من البيانات المعلقة؛ بقي ${res.remaining}. ${res.errors[0]}`,
         );
       }
-      setPendingCount(getQueue().length);
+      if (rpcRes.errors.length > 0) toast.error(`تعذرت مزامنة بعض العمليات: ${rpcRes.errors[0]}`);
+      setPendingCount(getQueue().length + rpcRes.remaining);
     };
     window.addEventListener("offline", update);
     window.addEventListener("online", handleOnline);
     // شيك كل 10 ثواني لو فيه بيانات معلقة
     const t = setInterval(async () => {
-      if (navigator.onLine && getQueue().length > 0) {
+      if (navigator.onLine && (getQueue().length > 0 || (await getRpcQueue()).length > 0)) {
         const res = await syncPending();
+        const rpcRes = await syncQueuedRpc();
         if ("errors" in res && res.errors.length > 0) {
           toast.error(`تعذرت مزامنة بعض البيانات المعلقة: ${res.errors[0]}`);
         }
-        setPendingCount(getQueue().length);
+        if (rpcRes.errors.length > 0) toast.error(`تعذرت مزامنة بعض العمليات: ${rpcRes.errors[0]}`);
+        setPendingCount(getQueue().length + rpcRes.remaining);
       }
     }, 10000);
     return () => {

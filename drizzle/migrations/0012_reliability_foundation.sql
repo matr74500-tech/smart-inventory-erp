@@ -18,6 +18,7 @@ create policy "read customer payment plans" on public.customer_payment_plans
   for select to authenticated using (true);
 
 create or replace function public.save_payment_plan(
+  _id uuid,
   _customer_id uuid,
   _total_amount_yer numeric,
   _installments_count integer,
@@ -37,16 +38,18 @@ begin
   end if;
 
   insert into public.customer_payment_plans (
-    customer_id, total_amount_yer, installments_count, due_date, created_by
+    id, customer_id, total_amount_yer, installments_count, due_date, created_by
   ) values (
-    _customer_id, _total_amount_yer, _installments_count, _due_date, auth.uid()
-  ) returning * into result;
+    _id, _customer_id, _total_amount_yer, _installments_count, _due_date, auth.uid()
+  ) on conflict (id) do nothing;
+
+  select * into result from public.customer_payment_plans where id = _id;
 
   return result;
 end;
 $$;
 
-grant execute on function public.save_payment_plan(uuid, numeric, integer, date) to authenticated;
+grant execute on function public.save_payment_plan(uuid, uuid, numeric, integer, date) to authenticated;
 
 create or replace function public.refresh_payment_plan_statuses()
 returns void

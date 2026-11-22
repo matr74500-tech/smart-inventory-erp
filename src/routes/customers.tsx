@@ -36,6 +36,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 
 export const Route = createFileRoute("/customers")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -349,13 +350,30 @@ function CustomersPage() {
       toast.error("جميع الحقول مطلوبة");
       return;
     }
-    const { data, error } = await supabase.rpc("save_payment_plan", {
+    const operationId = crypto.randomUUID();
+    const args = {
+      _id: operationId,
       _customer_id: pCustId,
       _total_amount_yer: Number(pAmount),
       _installments_count: Number(pCount) || 3,
       _due_date: pDate,
-    });
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "save_payment_plan", args });
+      toast.success("تم حفظ خطة السداد محليًا وستتم مزامنتها عند عودة الاتصال");
+      setPAmount("");
+      setOpenPlan(false);
+      return;
+    }
+    const { data, error } = await supabase.rpc("save_payment_plan", args);
     if (error || !data) {
+      if (error && /network|fetch|offline|failed/i.test(error.message)) {
+        await enqueueRpc({ id: operationId, name: "save_payment_plan", args });
+        toast.success("تعذر الاتصال؛ تم حفظ الخطة محليًا وستتم مزامنتها تلقائيًا");
+        setPAmount("");
+        setOpenPlan(false);
+        return;
+      }
       toast.error(`تعذر إنشاء خطة السداد: ${error?.message || "استجابة غير صالحة"}`);
       return;
     }
