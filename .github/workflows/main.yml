@@ -38,6 +38,10 @@ jobs:
       - name: Ensure Capacitor Packages
         run: bun add -D @capacitor/cli @capacitor/core @capacitor/android
 
+      - name: Prepare Capacitor entry point
+        run: |
+          printf '%s\n' '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Inventory ERP</title></head><body></body></html>' > .vercel/output/static/index.html
+
       - name: Ensure Capacitor Android
         run: |
           if [ ! -d "android" ]; then
