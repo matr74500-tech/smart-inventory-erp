@@ -111,3 +111,19 @@ GRANT EXECUTE ON FUNCTION public.save_product_supplier_offline(uuid,uuid,uuid,te
 GRANT EXECUTE ON FUNCTION public.save_product_offline(uuid,uuid,jsonb,jsonb,jsonb) TO authenticated;
 REVOKE ALL ON FUNCTION public.save_catalog_setting_offline(uuid,text,uuid,jsonb) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.save_catalog_setting_offline(uuid,text,uuid,jsonb) TO authenticated;
+
+-- upload product image offline (stores image as data URL on product row)
+CREATE OR REPLACE FUNCTION public.upload_product_image_offline(
+  _operation_id uuid, _product_id uuid, _image_data_url text
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.offline_operation_receipts WHERE operation_id=_operation_id) THEN RETURN; END IF;
+  IF NOT public.employee_can(auth.uid(),'pages','inventory')
+    AND NOT public.employee_can(auth.uid(),'pages','prices') THEN RAISE EXCEPTION 'غير مصرح بتعديل الصور'; END IF;
+  INSERT INTO public.offline_operation_receipts(operation_id,operation_kind,user_id)
+    VALUES(_operation_id,'upload_product_image',auth.uid());
+  UPDATE public.products SET image_url=_image_data_url, updated_at=now() WHERE id=_product_id;
+END $$;
+
+REVOKE ALL ON FUNCTION public.upload_product_image_offline(uuid,uuid,text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.upload_product_image_offline(uuid,uuid,text) TO authenticated;

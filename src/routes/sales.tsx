@@ -54,7 +54,7 @@ type SalesInvoice = Tables<"sales_invoices">;
 
 function SalesPage() {
   const { canAction } = useAuth();
-  const { products, warehouses, qty, reload, currencies, exchangeRates } = useInventory();
+  const { products, warehouses, qty, reload, currencies, exchangeRates, settings } = useInventory();
   const { view } = Route.useSearch();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [drafts, setDrafts] = useState<SalesInvoice[]>([]);
@@ -70,10 +70,12 @@ function SalesPage() {
   const [busy, setBusy] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
 
-  const paymentMethods = JSON.parse(
-    localStorage.getItem("suhail_payment_methods") ||
-      '["نقدي YER", "سعودي SAR", "تحويلات شبكات محلية", "آجل"]',
-  );
+  const paymentMethods = (settings?.payment_methods as string[]) ?? [
+    "نقدي YER",
+    "سعودي SAR",
+    "تحويلات شبكات محلية",
+    "آجل",
+  ];
 
   const refreshDrafts = useCallback(async () => {
     const { data, error } = await supabase

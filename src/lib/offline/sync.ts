@@ -15,9 +15,13 @@ async function insertQueued<T extends TableName>(table: T, data: Json) {
 }
 
 // يزامن كل البيانات المعلقة مع قاعدة البيانات
-export async function syncPending() {
+export async function syncPending(): Promise<{
+  synced: number;
+  remaining: number;
+  errors: string[];
+}> {
   const queue = getQueue();
-  if (queue.length === 0) return { synced: 0 };
+  if (queue.length === 0) return { synced: 0, remaining: 0, errors: [] };
 
   let synced = 0;
   const errors: string[] = [];

@@ -15,6 +15,7 @@ export type Database = {
           phone: string | null;
           shop_name: string;
           updated_at: string;
+          payment_methods: string[];
         };
         Insert: {
           id?: number;
@@ -22,6 +23,7 @@ export type Database = {
           phone?: string | null;
           shop_name?: string;
           updated_at?: string;
+          payment_methods?: string[];
         };
         Update: {
           id?: number;
@@ -29,6 +31,7 @@ export type Database = {
           phone?: string | null;
           shop_name?: string;
           updated_at?: string;
+          payment_methods?: string[];
         };
         Relationships: [];
       };

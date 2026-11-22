@@ -60,6 +60,23 @@ export function isTransientNetworkError(error: unknown): boolean {
   return /network|fetch|offline|failed to fetch|connection|internet|timeout/i.test(message);
 }
 
+let fallbackMutex: Promise<void> = Promise.resolve();
+
+async function withFallbackMutex<T>(fn: () => T): Promise<T> {
+  let release!: () => void;
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const prev = fallbackMutex;
+  fallbackMutex = prev.then(() => wait).catch(() => wait);
+  try {
+    await prev;
+    return fn();
+  } finally {
+    release();
+  }
+}
+
 function fallbackRead(): QueuedRpc[] {
   if (typeof localStorage === "undefined") return [];
   let raw: string | null;
@@ -97,6 +114,26 @@ function openDb(): Promise<IDBDatabase | null> {
   }).catch((): null => null);
 }
 
+async function persistRpcItem(item: QueuedRpc): Promise<void> {
+  const db = await openDb();
+  if (!db) {
+    await withFallbackMutex(() => {
+      fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]);
+    });
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(item);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  }).catch(() =>
+    withFallbackMutex(() => {
+      fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]);
+    })
+  );
+  db.close();
+}
+
 export async function enqueueRpc(
   operation: Omit<QueuedRpc, "createdAt" | "attempts">,
 ): Promise<void> {
@@ -132,29 +169,23 @@ export async function getRpcQueue(): Promise<QueuedRpc[]> {
 export async function removeRpc(id: string): Promise<void> {
   const db = await openDb();
   if (!db) {
-    fallbackWrite(fallbackRead().filter((item) => item.id !== id));
+    await withFallbackMutex(() => {
+      fallbackWrite(fallbackRead().filter((item) => item.id !== id));
+    });
     return;
   }
   await new Promise<void>((resolve, reject) => {
     const request = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).delete(id);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
-  }).catch(() => fallbackWrite(fallbackRead().filter((item) => item.id !== id)));
-  fallbackWrite(fallbackRead().filter((item) => item.id !== id));
-  db.close();
-}
-
-async function persistRpcItem(item: QueuedRpc): Promise<void> {
-  const db = await openDb();
-  if (!db) {
-    fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]);
-    return;
-  }
-  await new Promise<void>((resolve, reject) => {
-    const request = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(item);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  }).catch(() => fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]));
+  }).catch(() =>
+    withFallbackMutex(() => {
+      fallbackWrite(fallbackRead().filter((item) => item.id !== id));
+    })
+  );
+  await withFallbackMutex(() => {
+    fallbackWrite(fallbackRead().filter((item) => item.id !== id));
+  });
   db.close();
 }
 

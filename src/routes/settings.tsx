@@ -105,7 +105,18 @@ function SettingsPage() {
             <MinimumsEditor inv={inv} />
           </TabsContent>
           <TabsContent value="shop">
-            <ShopSettings name={inv.settings?.shop_name ?? ""} phone={inv.settings?.phone ?? ""} />
+            <ShopSettings
+              name={inv.settings?.shop_name ?? ""}
+              phone={inv.settings?.phone ?? ""}
+              paymentMethods={
+                (inv.settings?.payment_methods as string[]) ?? [
+                  "نقدي YER",
+                  "سعودي SAR",
+                  "تحويلات شبكات محلية",
+                  "آجل",
+                ]
+              }
+            />
           </TabsContent>
           <TabsContent value="currencies">
             <CurrenciesEditor currencies={inv.currencies} exchangeRates={inv.exchangeRates} />
@@ -604,21 +615,35 @@ function ListEditor({
   );
 }
 
-function ShopSettings({ name, phone }: { name: string; phone: string }) {
+function ShopSettings({
+  name,
+  phone,
+  paymentMethods,
+}: {
+  name: string;
+  phone: string;
+  paymentMethods: string[];
+}) {
+  const [pm, setPm] = useState(paymentMethods.join("\n"));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const methods: string[] = pm
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const { error } = await supabase.from("app_settings").upsert({
       id: 1,
       shop_name: String(f.get("shop_name")),
       phone: String(f.get("phone") || "") || null,
+      payment_methods: methods,
     });
     if (error) toast.error(error.message);
     else toast.success("تم الحفظ");
   }
   return (
     <form
-      key={name + phone}
+      key={name + phone + pm}
       onSubmit={save}
       className="mt-4 rounded-xl bg-card shadow-card p-4 grid sm:grid-cols-2 gap-3 max-w-xl"
     >
@@ -629,6 +654,16 @@ function ShopSettings({ name, phone }: { name: string; phone: string }) {
       <div className="space-y-1">
         <Label>رقم الهاتف</Label>
         <Input name="phone" dir="ltr" defaultValue={phone} />
+      </div>
+      <div className="sm:col-span-2 space-y-1">
+        <Label>طرق الدفع (سطر لكل طريقة)</Label>
+        <textarea
+          name="payment_methods"
+          className="w-full h-24 rounded-md border border-input bg-background p-2 text-sm font-mono"
+          defaultValue={pm}
+          onChange={(e) => setPm(e.target.value)}
+          placeholder="نقدي YER&#10;سعودي SAR&#10;تحويلات شبكات محلية&#10;آجل"
+        />
       </div>
       <Button type="submit" className="sm:col-span-2">
         حفظ

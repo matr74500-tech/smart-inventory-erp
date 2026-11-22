@@ -76,7 +76,12 @@ async function detectCatalogSettingConflict(item: QueuedRpc): Promise<ConflictIn
   return buildConflictInfo(item, data);
 }
 
-export async function syncQueuedRpc(options?: { forceIds?: string[] }) {
+export async function syncQueuedRpc(options?: { forceIds?: string[] }): Promise<{
+  synced: number;
+  remaining: number;
+  errors: string[];
+  failedIds: string[];
+}> {
   const queue = await getRpcQueue();
   const { data: authData } = await supabase.auth.getSession();
   let synced = 0;
