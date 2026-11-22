@@ -141,9 +141,7 @@ function previewRows(data: BackupData): Array<{ name: string; count: number }> {
 }
 
 /** Ejecuta la restauración: inserciones con onConflict=id + ignoreDuplicates para no sobrescribir datos existentes. */
-async function executeRestore(
-  data: BackupData,
-): Promise<{ ok: boolean; message: string }> {
+async function executeRestore(data: BackupData): Promise<{ ok: boolean; message: string }> {
   const tables = data.tables ?? {};
   const names = Object.keys(tables).filter((t) => {
     const rows = tables[t];
@@ -322,8 +320,8 @@ function BackupPage() {
       <div className="rounded-xl bg-card shadow-card p-5 space-y-4 mb-6">
         <div className="font-bold">استعادة من ملف (استيراد)</div>
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-semibold text-destructive">
-          ⚠️ تنبيه: الاستعادة تشمل بيانات الجداول فقط — لا تشمل حسابات المصادقة (Auth) أو
-          ملفات الصور في Storage.
+          ⚠️ تنبيه: الاستعادة تشمل بيانات الجداول فقط — لا تشمل حسابات المصادقة (Auth) أو ملفات
+          الصور في Storage.
         </div>
         <p className="text-sm text-muted-foreground">
           رفع ملف نسخ احتياطي (JSON) لاستعادة بيانات الجداول من هذا الجهاز.
@@ -349,14 +347,14 @@ function BackupPage() {
         </div>
         {file && preview && (
           <div className="space-y-2">
-            <div className="text-sm font-semibold">
-              معاينة الاستعادة (عدد السجلات لكل جدول):
-            </div>
+            <div className="text-sm font-semibold">معاينة الاستعادة (عدد السجلات لكل جدول):</div>
             <div className="max-h-56 overflow-y-auto text-sm space-y-1">
               {preview.map((p) => (
                 <div key={p.name} className="flex justify-between">
                   <span dir="ltr">{p.name}</span>
-                  <span>{p.count} سجل{p.count === 1 ? "" : "ات"}</span>
+                  <span>
+                    {p.count} سجل{p.count === 1 ? "" : "ات"}
+                  </span>
                 </div>
               ))}
             </div>
@@ -366,11 +364,7 @@ function BackupPage() {
           </div>
         )}
         <Button onClick={runRestore} disabled={!file || !!restoring}>
-          {restoring ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Upload className="size-4" />
-          )}{" "}
+          {restoring ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}{" "}
           ابدأ الاستعادة
         </Button>
       </div>

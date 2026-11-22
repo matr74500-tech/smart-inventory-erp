@@ -129,7 +129,7 @@ async function persistRpcItem(item: QueuedRpc): Promise<void> {
   }).catch(() =>
     withFallbackMutex(() => {
       fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]);
-    })
+    }),
   );
   db.close();
 }
@@ -181,7 +181,7 @@ export async function removeRpc(id: string): Promise<void> {
   }).catch(() =>
     withFallbackMutex(() => {
       fallbackWrite(fallbackRead().filter((item) => item.id !== id));
-    })
+    }),
   );
   await withFallbackMutex(() => {
     fallbackWrite(fallbackRead().filter((item) => item.id !== id));

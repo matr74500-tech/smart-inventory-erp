@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  clearRpcConflict,
-  enqueueRpc,
-  getRpcQueue,
-  removeRpc,
-} from "@/lib/offline/rpc-queue";
+import { clearRpcConflict, enqueueRpc, getRpcQueue, removeRpc } from "@/lib/offline/rpc-queue";
 import { syncQueuedRpc } from "@/lib/offline/rpc-sync";
 import { wipeInventoryCache } from "@/lib/offline/inventory-cache";
 
@@ -154,9 +149,17 @@ describe("offline sync integration", () => {
 
   it("account switching: other user's queued operations stay queued (queue isolation)", async () => {
     sessionUserId = "user-A";
-    await enqueueRpc({ id: "opA", name: "save_product_offline", args: { _operation_id: "opA", _id: "pA" } as never });
+    await enqueueRpc({
+      id: "opA",
+      name: "save_product_offline",
+      args: { _operation_id: "opA", _id: "pA" } as never,
+    });
     sessionUserId = "user-B";
-    await enqueueRpc({ id: "opB", name: "post_sale_offline", args: { _operation_id: "opB", _id: "inv-B" } as never });
+    await enqueueRpc({
+      id: "opB",
+      name: "post_sale_offline",
+      args: { _operation_id: "opB", _id: "inv-B" } as never,
+    });
 
     const res = await syncQueuedRpc();
     const queue = await getRpcQueue();

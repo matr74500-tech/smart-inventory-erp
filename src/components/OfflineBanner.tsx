@@ -14,13 +14,7 @@ function fmt(value: unknown): string {
   return String(value);
 }
 
-function ConflictCard({
-  item,
-  refresh,
-}: {
-  item: QueuedRpc;
-  refresh: () => Promise<void>;
-}) {
+function ConflictCard({ item, refresh }: { item: QueuedRpc; refresh: () => Promise<void> }) {
   const conflict = item.conflict;
   if (!conflict) return null;
   const fields = ["name", "price", "cost", "unit", "factor", "supplier"] as const;
@@ -121,9 +115,7 @@ export function OfflineBanner() {
           : `توجد ${pendingCount} عملية بانتظار المزامنة`}
       {hasConflicts && (
         <div className="mt-2 flex flex-col items-center gap-2 text-sm">
-          <div className="font-semibold">
-            وجود تعارض أحدث بين تعديلك وتعديلات الآخرين — اختر:
-          </div>
+          <div className="font-semibold">وجود تعارض أحدث بين تعديلك وتعديلات الآخرين — اختر:</div>
           {conflicts.map((item) => (
             <ConflictCard key={item.id} item={item} refresh={update} />
           ))}

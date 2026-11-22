@@ -18,8 +18,10 @@ type TableName = keyof Database["public"]["Tables"];
  */
 function buildConflictInfo(item: QueuedRpc, server: Record<string, unknown>): ConflictInfo | null {
   const localRaw = item.args["_product"] ?? item.args["_record"];
-  const local =
-    (typeof localRaw === "object" && localRaw !== null ? localRaw : {}) as Record<string, unknown>;
+  const local = (typeof localRaw === "object" && localRaw !== null ? localRaw : {}) as Record<
+    string,
+    unknown
+  >;
   const localBaseMs = (() => {
     const value = local["updated_at"];
     if (typeof value === "string" && value) {
@@ -59,7 +61,10 @@ async function detectProductConflict(item: QueuedRpc): Promise<ConflictInfo | nu
 }
 
 /** Configuraciones (categories/warehouses/units/custom_fields): verifica `updated_at` antes de `save_catalog_setting_offline`. */
-async function fetchCatalogSetting(table: string, id: string): Promise<Record<string, unknown> | null> {
+async function fetchCatalogSetting(
+  table: string,
+  id: string,
+): Promise<Record<string, unknown> | null> {
   const query = supabase
     .from(table as TableName)
     .select("id, updated_at, name") as unknown as FetchedRow;
@@ -137,8 +142,7 @@ export async function syncQueuedRpc(options?: { forceIds?: string[] }): Promise<
       // عند التحديثات على المنتجات/الأسعار والإعدادات: أوقف عندما يكون الخادم أحدث من التعديل المحلي
       if (
         !force.has(item.id) &&
-        (item.name === "save_product_offline" ||
-          item.name === "save_catalog_setting_offline")
+        (item.name === "save_product_offline" || item.name === "save_catalog_setting_offline")
       ) {
         const conflict =
           item.name === "save_product_offline"
