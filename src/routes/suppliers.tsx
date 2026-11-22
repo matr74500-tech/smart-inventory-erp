@@ -17,6 +17,8 @@ import { useInventory } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
+import { getPrivateSnapshot, savePrivateSnapshot } from "@/lib/offline/inventory-cache";
 
 export const Route = createFileRoute("/suppliers")({
   head: () => ({ meta: [{ title: "إدارة الموردين | نظام المخزون الذكي" }] }),
@@ -28,7 +30,7 @@ type ProductSupplier = Tables<"product_suppliers">;
 
 function SuppliersPage() {
   const { products } = useInventory();
-  const { canAction } = useAuth();
+  const { canAction, session } = useAuth();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [productSuppliers, setProductSuppliers] = useState<ProductSupplier[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -45,6 +47,20 @@ function SuppliersPage() {
   useEffect(() => {
     let active = true;
     const load = async () => {
+      const userId = session?.user.id;
+      if (!navigator.onLine) {
+        if (userId) {
+          const cached = await getPrivateSnapshot<{
+            suppliers: Supplier[];
+            mappings: ProductSupplier[];
+          }>(userId, "suppliers");
+          if (active && cached) {
+            setSuppliers(cached.suppliers);
+            setProductSuppliers(cached.mappings);
+          }
+        }
+        return;
+      }
       const [supplierResult, mappingResult] = await Promise.all([
         supabase.from("suppliers").select("*").order("name"),
         supabase.from("product_suppliers").select("*"),
@@ -55,6 +71,11 @@ function SuppliersPage() {
       if (mappingResult.error)
         toast.error(`تعذر تحميل روابط الموردين بالأصناف: ${mappingResult.error.message}`);
       else setProductSuppliers(mappingResult.data ?? []);
+      if (userId && !supplierResult.error && !mappingResult.error)
+        await savePrivateSnapshot(userId, "suppliers", {
+          suppliers: supplierResult.data ?? [],
+          mappings: mappingResult.data ?? [],
+        });
     };
     void load();
     const channel = supabase
@@ -74,22 +95,69 @@ function SuppliersPage() {
       active = false;
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [session?.user.id]);
 
   async function saveSupplier(event: FormEvent) {
     event.preventDefault();
-    const { error } = await supabase.rpc("save_supplier", {
-      _id: editingId,
+    const operationId = crypto.randomUUID();
+    const stableId = editingId ?? crypto.randomUUID();
+    const args = {
+      _operation_id: operationId,
+      _id: stableId,
       _name: name.trim(),
       _phone: phone.trim(),
       _address: address.trim(),
       _notes: supplierNotes.trim() || null,
-    });
-    if (error) {
+    };
+    let { error } = await supabase.rpc("save_supplier_offline", args);
+    if (error && (error.code === "42883" || error.code === "PGRST202")) {
+      const legacy = await supabase.rpc("save_supplier", {
+        _id: editingId,
+        _name: name.trim(),
+        _phone: phone.trim(),
+        _address: address.trim(),
+        _notes: supplierNotes.trim() || null,
+      });
+      error = legacy.error;
+    }
+    if (error && isTransientNetworkError(error)) {
+      try {
+        await enqueueRpc({ id: operationId, name: "save_supplier_offline", args });
+      } catch (queueError) {
+        toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ المورد محليًا");
+        return;
+      }
+      const localSupplier: Supplier = {
+        id: stableId,
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        notes: supplierNotes.trim() || null,
+        active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setSuppliers((items) => [localSupplier, ...items.filter((item) => item.id !== stableId)]);
+      if (session?.user.id) {
+        const cached = await getPrivateSnapshot<{
+          suppliers: Supplier[];
+          mappings: ProductSupplier[];
+        }>(session.user.id, "suppliers");
+        await savePrivateSnapshot(session.user.id, "suppliers", {
+          suppliers: [
+            localSupplier,
+            ...(cached?.suppliers ?? []).filter((item) => item.id !== stableId),
+          ],
+          mappings: cached?.mappings ?? productSuppliers,
+        });
+      }
+      toast.info("حُفظ المورد على هذا الجهاز وسيُزامن عند عودة الاتصال");
+    } else if (error) {
       toast.error(`تعذر حفظ المورد: ${error.message}`);
       return;
+    } else {
+      toast.success(editingId ? "تم تحديث المورد" : "تمت إضافة المورد");
     }
-    toast.success(editingId ? "تم تحديث المورد" : "تمت إضافة المورد");
     setEditingId(null);
     setName("");
     setPhone("");
@@ -121,11 +189,44 @@ function SuppliersPage() {
       _last_cost: cost,
       _is_primary: primary,
     });
-    if (error) {
+    if (error && isTransientNetworkError(error)) {
+      const operationId = crypto.randomUUID();
+      try {
+        await enqueueRpc({
+          id: operationId,
+          name: "save_product_supplier_offline",
+          args: {
+            _operation_id: operationId,
+            _product_id: productId,
+            _supplier_id: supplierId,
+            _supplier_sku: supplierSku.trim() || null,
+            _last_cost: cost,
+            _is_primary: primary,
+          },
+        });
+      } catch (queueError) {
+        toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ الربط محليًا");
+        return;
+      }
+      toast.info("حُفظ الربط على هذا الجهاز وسيُزامن عند عودة الاتصال");
+      const localMapping: ProductSupplier = {
+        product_id: productId,
+        supplier_id: supplierId,
+        supplier_sku: supplierSku.trim() || null,
+        last_cost: cost,
+        is_primary: primary,
+        updated_at: new Date().toISOString(),
+      };
+      setProductSuppliers((items) => [
+        localMapping,
+        ...items.filter((item) => item.product_id !== productId || item.supplier_id !== supplierId),
+      ]);
+    } else if (error) {
       toast.error(`تعذر ربط المورد بالصنف: ${error.message}`);
       return;
+    } else {
+      toast.success("تم ربط المورد بالصنف ومزامنة بياناته");
     }
-    toast.success("تم ربط المورد بالصنف ومزامنة بياناته");
     setSupplierSku("");
     setLastCost("0");
     setPrimary(false);

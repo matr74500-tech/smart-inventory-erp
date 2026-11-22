@@ -1321,6 +1321,42 @@ export type Database = {
         };
         Returns: string;
       };
+      save_supplier_offline: {
+        Args: {
+          _address: string;
+          _id: string;
+          _name: string;
+          _notes: string | null;
+          _operation_id: string;
+          _phone: string;
+        };
+        Returns: string;
+      };
+      save_product_supplier_offline: {
+        Args: {
+          _is_primary: boolean;
+          _last_cost: number;
+          _operation_id: string;
+          _product_id: string;
+          _supplier_id: string;
+          _supplier_sku: string | null;
+        };
+        Returns: undefined;
+      };
+      save_product_offline: {
+        Args: {
+          _attributes: Json;
+          _balances: Json;
+          _id: string;
+          _operation_id: string;
+          _product: Json;
+        };
+        Returns: string;
+      };
+      save_catalog_setting_offline: {
+        Args: { _id: string; _operation_id: string; _record: Json; _table: string };
+        Returns: string;
+      };
       refresh_payment_plan_statuses: { Args: never; Returns: undefined };
       update_payment_plan_status: {
         Args: { _id: string; _status: string };

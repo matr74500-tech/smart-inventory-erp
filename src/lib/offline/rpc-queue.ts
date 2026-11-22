@@ -19,7 +19,11 @@ export type QueuedRpc = {
     | "close_daily_cash_offline"
     | "save_voucher_draft_offline"
     | "post_voucher_offline"
-    | "save_customer_offline";
+    | "save_customer_offline"
+    | "save_supplier_offline"
+    | "save_product_supplier_offline"
+    | "save_product_offline"
+    | "save_catalog_setting_offline";
   args: Record<string, Json>;
   createdAt: number;
   attempts: number;
@@ -61,12 +65,12 @@ function fallbackWrite(items: QueuedRpc[]) {
 
 function openDb(): Promise<IDBDatabase | null> {
   if (typeof indexedDB === "undefined") return Promise.resolve(null);
-  return new Promise((resolve, reject) => {
+  return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME, { keyPath: "id" });
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
-  }).catch(() => null);
+  }).catch((): null => null);
 }
 
 export async function enqueueRpc(

@@ -18,6 +18,7 @@ import {
 import type { Category, CustomField, Product, Unit, Warehouse } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
 import { PRICE_TIERS, fileToDataUrl } from "@/lib/inventory-utils";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 
 const NONE = "__none";
 
@@ -127,15 +128,42 @@ function ProductForm({
             .filter((item) => Number.isFinite(item.quantity) && item.quantity > 0)
         : [];
     setBusy(true);
+    const productId = p?.id ?? crypto.randomUUID();
+    const operationId = crypto.randomUUID();
+    const offlineRow = { ...allowedRow, image_url: p?.image_url ?? null };
+    const offlineArgs = {
+      _operation_id: operationId,
+      _id: productId,
+      _product: offlineRow,
+      _attributes: visibleFields.length
+        ? Object.fromEntries(Object.entries(attrs).filter(([k]) => canField(`attribute:${k}`)))
+        : {},
+      _balances: initialBalances,
+    };
+    const saveOffline = async () =>
+      enqueueRpc({ id: operationId, name: "save_product_offline", args: offlineArgs as never });
     if (p) {
       delete allowedRow.attributes;
       const { error } = await supabase.from("products").update(allowedRow).eq("id", p.id);
       setBusy(false);
+      if (error && isTransientNetworkError(error)) {
+        try {
+          await saveOffline();
+        } catch (queueError) {
+          setBusy(false);
+          toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ العملية محليًا");
+          return;
+        }
+        setBusy(false);
+        toast.info("حُفظ تعديل الصنف على هذا الجهاز وسيُزامن عند عودة الاتصال؛ الصورة تبقى كما هي");
+        onOpenChange(false);
+        return;
+      }
       if (error) {
         toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message);
         return;
       }
-      if (visibleFields.length) {
+      if (visibleFields.length && !error) {
         const { error: attrError } = await supabase.rpc("save_product_attributes", {
           _product: p.id,
           _attributes: Object.fromEntries(
@@ -151,9 +179,22 @@ function ProductForm({
     } else {
       const { data, error } = await supabase
         .from("products")
-        .insert(allowedRow as typeof row)
+        .insert({ ...allowedRow, id: productId } as typeof row)
         .select("id")
         .single();
+      if (error && isTransientNetworkError(error)) {
+        try {
+          await saveOffline();
+        } catch (queueError) {
+          setBusy(false);
+          toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ العملية محليًا");
+          return;
+        }
+        setBusy(false);
+        toast.info("حُفظ الصنف على هذا الجهاز وسيُزامن عند عودة الاتصال؛ الصورة ستحتاج رفعًا لاحقًا");
+        onOpenChange(false);
+        return;
+      }
       if (error) {
         setBusy(false);
         toast.error(error.code === "23505" ? "الباركود أو الكود مستخدم لصنف آخر" : error.message);

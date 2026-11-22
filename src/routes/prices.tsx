@@ -8,6 +8,8 @@ import { useInventory } from "@/hooks/use-inventory";
 import { matchesSearch } from "@/lib/arabic";
 import { PRICE_TIERS, adjustPrice, type PriceKey } from "@/lib/inventory-utils";
 import { supabase } from "@/integrations/supabase/client";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
+import { patchCachedInventoryRow } from "@/lib/offline/inventory-cache";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -41,7 +43,7 @@ type Field = PriceKey | "cost";
 const FIELDS: { key: Field; label: string }[] = [{ key: "cost", label: "التكلفة" }, ...PRICE_TIERS];
 
 function PricesPage() {
-  const { canAction, canField } = useAuth();
+  const { canAction, canField, session } = useAuth();
   const { products, categories } = useInventory();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState(ALL);
@@ -82,19 +84,46 @@ function PricesPage() {
     const ids = Object.keys(drafts);
     if (!ids.length) return;
     setSaving(true);
+    let queued = 0;
     const results = await Promise.all(
-      ids.map((id) =>
-        supabase
+      ids.map(async (id) => {
+        const { error } = await supabase
           .from("products")
           .update({ ...drafts[id], updated_at: new Date().toISOString() })
-          .eq("id", id),
-      ),
+          .eq("id", id);
+        if (!error) return null;
+        if (!isTransientNetworkError(error)) return error.message;
+        const operationId = crypto.randomUUID();
+        try {
+          await enqueueRpc({
+            id: operationId,
+            name: "save_product_offline",
+            args: {
+              _operation_id: operationId,
+              _id: id,
+              _product: drafts[id] as never,
+              _attributes: {},
+              _balances: [],
+            },
+          });
+          queued++;
+          if (session?.user.id)
+            await patchCachedInventoryRow(session.user.id, "products", id, drafts[id] ?? {});
+          return null;
+        } catch (queueError) {
+          return queueError instanceof Error ? queueError.message : "تعذر حفظ السعر محليًا";
+        }
+      }),
     );
     setSaving(false);
-    const failed = results.filter((r) => r.error);
-    if (failed.length) toast.error(failed[0]?.error?.message ?? "خطأ");
+    const failed = results.filter((error): error is string => Boolean(error));
+    if (failed.length) toast.error(failed[0] ?? "خطأ");
     else {
-      toast.success(`تم تحديث أسعار ${ids.length} صنف في كل المستودعات`);
+      toast.success(
+        queued
+          ? `تم تحديث الأسعار؛ وحُفظت ${queued} عملية على الجهاز للمزامنة عند عودة الاتصال`
+          : `تم تحديث أسعار ${ids.length} صنف في كل المستودعات`,
+      );
       setDrafts({});
     }
   }

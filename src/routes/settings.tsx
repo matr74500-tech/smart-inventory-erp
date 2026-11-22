@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
+import { patchCachedInventoryRow } from "@/lib/offline/inventory-cache";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -373,6 +375,8 @@ function ListEditor({
   const [draft, setDraft] = useState<Record<string, string>>(empty);
   const [editing, setEditing] = useState<string | null>(null);
   const [edit, setEdit] = useState<Record<string, string>>({});
+  const [localRows, setLocalRows] = useState(rows);
+  useEffect(() => setLocalRows(rows), [rows]);
 
   const payload = (d: Record<string, string>) =>
     Object.fromEntries(cols.map((c) => [c.key, toValue(c, d[c.key] ?? "")]));
@@ -380,7 +384,49 @@ function ListEditor({
   async function add(e: FormEvent) {
     e.preventDefault();
     if (!draft[cols[0]?.key ?? ""]?.trim()) return;
-    const { error } = await supabase.from(table).insert(payload(draft) as never);
+    const id = crypto.randomUUID();
+    const operationId = crypto.randomUUID();
+    const record = payload(draft);
+    let { error } = await supabase.rpc("save_catalog_setting_offline", {
+      _operation_id: operationId,
+      _table: table,
+      _id: id,
+      _record: record,
+    });
+    if (error && (error.code === "42883" || error.code === "PGRST202")) {
+      const legacy = await supabase.from(table).insert(record as never);
+      error = legacy.error;
+    }
+    if (error && isTransientNetworkError(error)) {
+      try {
+        await enqueueRpc({
+          id: operationId,
+          name: "save_catalog_setting_offline",
+          args: {
+            _operation_id: operationId,
+            _table: table,
+            _id: id,
+            _record: record as never,
+          },
+        });
+      } catch (queueError) {
+        toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ الإعداد محليًا");
+        return;
+      }
+      setDraft(empty);
+      const localRow = { ...record, id } as AnyRow;
+      setLocalRows((items) => [localRow, ...items]);
+      const { data: auth } = await supabase.auth.getSession();
+      if (auth.session?.user.id)
+        await patchCachedInventoryRow(
+          auth.session.user.id,
+          table === "custom_fields" ? "fields" : table,
+          id,
+          record,
+        );
+      toast.info("حُفظ الإعداد على الجهاز وسيُزامن عند عودة الاتصال");
+      return;
+    }
     if (error) {
       toast.error(error.code === "23505" ? "الاسم موجود مسبقاً" : error.message);
       return;
@@ -389,10 +435,52 @@ function ListEditor({
     toast.success("تمت الإضافة");
   }
   async function save(id: string) {
-    const { error } = await supabase
-      .from(table)
-      .update(payload(edit) as never)
-      .eq("id", id);
+    const operationId = crypto.randomUUID();
+    const record = payload(edit);
+    let { error } = await supabase.rpc("save_catalog_setting_offline", {
+      _operation_id: operationId,
+      _table: table,
+      _id: id,
+      _record: record,
+    });
+    if (error && (error.code === "42883" || error.code === "PGRST202")) {
+      const legacy = await supabase
+        .from(table)
+        .update(record as never)
+        .eq("id", id);
+      error = legacy.error;
+    }
+    if (error && isTransientNetworkError(error)) {
+      try {
+        await enqueueRpc({
+          id: operationId,
+          name: "save_catalog_setting_offline",
+          args: {
+            _operation_id: operationId,
+            _table: table,
+            _id: id,
+            _record: record as never,
+          },
+        });
+      } catch (queueError) {
+        toast.error(queueError instanceof Error ? queueError.message : "تعذر حفظ الإعداد محليًا");
+        return;
+      }
+      setEditing(null);
+      setLocalRows((items) =>
+        items.map((row) => (row.id === id ? ({ ...row, ...record } as AnyRow) : row)),
+      );
+      const { data: auth } = await supabase.auth.getSession();
+      if (auth.session?.user.id)
+        await patchCachedInventoryRow(
+          auth.session.user.id,
+          table === "custom_fields" ? "fields" : table,
+          id,
+          record,
+        );
+      toast.info("حُفظ التعديل على الجهاز وسيُزامن عند عودة الاتصال");
+      return;
+    }
     if (error) {
       toast.error(error.message);
       return;
@@ -449,7 +537,7 @@ function ListEditor({
       </form>
       <p className="text-xs text-muted-foreground">{hint}</p>
       <div className="rounded-xl bg-card shadow-card divide-y">
-        {rows.map((r) => (
+        {localRows.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-3 p-3">
             {editing === r.id ? (
               <>

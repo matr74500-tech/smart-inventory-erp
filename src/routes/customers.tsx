@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
+import { getPrivateSnapshot, savePrivateSnapshot } from "@/lib/offline/inventory-cache";
 
 export const Route = createFileRoute("/customers")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -142,7 +143,7 @@ function isInactiveCustomer(customer: Customer, days: number | null): boolean {
 }
 
 function CustomersPage() {
-  const { canAction } = useAuth();
+  const { canAction, session } = useAuth();
   const { settings, currencies, exchangeRates } = useInventory();
   const { voucher: voucherShortcut } = Route.useSearch();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -178,6 +179,22 @@ function CustomersPage() {
   useEffect(() => {
     let active = true;
     const loadFinancialData = async () => {
+      const userId = session?.user.id;
+      if (!navigator.onLine) {
+        if (userId) {
+          const [cachedCustomers, cachedVouchers, cachedPlans] = await Promise.all([
+            getPrivateSnapshot<Customer[]>(userId, "customers"),
+            getPrivateSnapshot<Voucher[]>(userId, "vouchers"),
+            getPrivateSnapshot<PaymentPlan[]>(userId, "payment-plans"),
+          ]);
+          if (active) {
+            if (cachedCustomers) setCustomers(cachedCustomers);
+            if (cachedVouchers) setVouchers(cachedVouchers);
+            if (cachedPlans) setPlans(cachedPlans);
+          }
+        }
+        return;
+      }
       const { error: statusError } = await supabase.rpc("refresh_payment_plan_statuses");
       if (statusError) toast.error(`تعذر تحديث حالات خطط السداد: ${statusError.message}`);
       const [customerResult, voucherResult, planResult] = await Promise.all([
@@ -190,11 +207,23 @@ function CustomersPage() {
       ]);
       if (!active) return;
       if (customerResult.error) toast.error(`تعذر تحميل العملاء: ${customerResult.error.message}`);
-      else setCustomers((customerResult.data ?? []).map(mapCustomer));
+      else {
+        const mapped = (customerResult.data ?? []).map(mapCustomer);
+        setCustomers(mapped);
+        if (userId) await savePrivateSnapshot(userId, "customers", mapped);
+      }
       if (voucherResult.error) toast.error(`تعذر تحميل السندات: ${voucherResult.error.message}`);
-      else setVouchers((voucherResult.data ?? []).map(mapVoucher));
+      else {
+        const mapped = (voucherResult.data ?? []).map(mapVoucher);
+        setVouchers(mapped);
+        if (userId) await savePrivateSnapshot(userId, "vouchers", mapped);
+      }
       if (planResult.error) toast.error(`تعذر تحميل خطط السداد: ${planResult.error.message}`);
-      else setPlans((planResult.data ?? []).map(mapPaymentPlan));
+      else {
+        const mapped = (planResult.data ?? []).map(mapPaymentPlan);
+        setPlans(mapped);
+        if (userId) await savePrivateSnapshot(userId, "payment-plans", mapped);
+      }
     };
     void loadFinancialData();
     const channel = supabase
@@ -219,7 +248,7 @@ function CustomersPage() {
       active = false;
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [session?.user.id]);
 
   useEffect(() => {
     if (!voucherShortcut) return;
@@ -257,22 +286,30 @@ function CustomersPage() {
       _credit_limit_yer: creditLimit,
       _inactive_alert_enabled: true,
     };
+    const localCustomer: Customer = {
+      id: customerId,
+      name: name.trim(),
+      phone: phone.trim(),
+      ...(secPhone.trim() ? { secondary_phone: secPhone.trim() } : {}),
+      address: address.trim(),
+      customer_type: type,
+      credit_limit: creditLimit,
+      balance: 0,
+      created_at: new Date().toISOString(),
+    };
+    const cacheLocalCustomer = async () => {
+      setCustomers((items) => [localCustomer, ...items.filter((item) => item.id !== customerId)]);
+      if (session?.user.id) {
+        const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
+        await savePrivateSnapshot(session.user.id, "customers", [
+          localCustomer,
+          ...(cached ?? []).filter((item) => item.id !== customerId),
+        ]);
+      }
+    };
     if (!navigator.onLine) {
       await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
-      setCustomers((items) => [
-        {
-          id: customerId,
-          name: name.trim(),
-          phone: phone.trim(),
-          secondary_phone: secPhone.trim() || undefined,
-          address: address.trim(),
-          customer_type: type,
-          credit_limit: creditLimit,
-          balance: 0,
-          created_at: new Date().toISOString(),
-        },
-        ...items,
-      ]);
+      await cacheLocalCustomer();
       toast.success("تم حفظ العميل على الجهاز وسيُزامن عند عودة الاتصال");
       setName("");
       setPhone("");
@@ -290,6 +327,7 @@ function CustomersPage() {
         return;
       }
       await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+      await cacheLocalCustomer();
       toast.success("انقطع الاتصال؛ حُفظ العميل محليًا للمزامنة");
       setName("");
       setPhone("");
@@ -302,11 +340,16 @@ function CustomersPage() {
     if (error) {
       if (isTransientNetworkError(error)) {
         await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+        await cacheLocalCustomer();
         toast.success("تعذر الاتصال؛ حُفظ العميل محليًا للمزامنة");
         setOpenAdd(false);
         return;
       }
       toast.error(`تعذر حفظ العميل: ${error.message}`);
+      return;
+    }
+    if (!savedCustomerId) {
+      toast.error("تمت العملية دون إرجاع معرف العميل؛ أعد تحميل القائمة عند الاتصال");
       return;
     }
     const { data, error: loadError } = await supabase
@@ -318,7 +361,15 @@ function CustomersPage() {
       toast.error(`تم حفظ العميل لكن تعذر تحديث القائمة: ${loadError.message}`);
       return;
     }
-    setCustomers((items) => [mapCustomer(data), ...items.filter((item) => item.id !== data.id)]);
+    const mappedCustomer = mapCustomer(data);
+    setCustomers((items) => [mappedCustomer, ...items.filter((item) => item.id !== data.id)]);
+    if (session?.user.id) {
+      const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
+      await savePrivateSnapshot(session.user.id, "customers", [
+        mappedCustomer,
+        ...(cached ?? []).filter((item) => item.id !== data.id),
+      ]);
+    }
     toast.success("تم حفظ العميل ومزامنته");
     setName("");
     setPhone("");
