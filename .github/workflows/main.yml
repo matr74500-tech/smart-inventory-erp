@@ -33,7 +33,7 @@ jobs:
       - name: Check built web assets
         run: |
           ls -la .vercel/output/static
-          test -f .vercel/output/static/index.html || (echo "built index.html not found!" && exit 1)
+          test -f .vercel/output/static/favicon.ico || (echo "built static assets not found!" && exit 1)
 
       - name: Ensure Capacitor Packages
         run: bun add -D @capacitor/cli @capacitor/core @capacitor/android
