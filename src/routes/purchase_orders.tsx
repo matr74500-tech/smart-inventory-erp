@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth";
 import { useInventory, type Product } from "@/hooks/use-inventory";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 
 export const Route = createFileRoute("/purchase_orders")({
   head: () => ({ meta: [{ title: "أوامر الشراء والنواقص | نظام المخزون الذكي" }] }),
@@ -106,6 +107,20 @@ function PurchaseOrdersPage() {
       toast.error("تحقق من الكميات والتكاليف المدخلة");
       return null;
     }
+    const operationId = draftId ?? crypto.randomUUID();
+    const args = {
+      _id: operationId,
+      _supplier_id: supplierId,
+      _warehouse: warehouseId,
+      _notes: notes.trim() || null,
+      _items: items,
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "save_purchase_order_draft_offline", args });
+      setDraftId(operationId);
+      toast.success("تم حفظ أمر الشراء محليًا وستتم مزامنته عند عودة الاتصال");
+      return operationId;
+    }
     const { data, error } = await supabase.rpc("save_purchase_order_draft", {
       _id: draftId,
       _supplier_id: supplierId,
@@ -114,6 +129,12 @@ function PurchaseOrdersPage() {
       _items: items,
     });
     if (error) {
+      if (/network|fetch|offline|failed/i.test(error.message)) {
+        await enqueueRpc({ id: operationId, name: "save_purchase_order_draft_offline", args });
+        setDraftId(operationId);
+        toast.success("تعذر الاتصال؛ حُفظ أمر الشراء محليًا للمزامنة");
+        return operationId;
+      }
       toast.error(`تعذر حفظ أمر الشراء: ${error.message}`);
       return null;
     }

@@ -1239,6 +1239,16 @@ export type Database = {
         };
         Returns: string;
       };
+      save_purchase_order_draft_offline: {
+        Args: {
+          _id: string;
+          _items: Json;
+          _notes: string | null;
+          _supplier_id: string;
+          _warehouse: string;
+        };
+        Returns: string;
+      };
       refresh_payment_plan_statuses: { Args: never; Returns: undefined };
       update_payment_plan_status: {
         Args: { _id: string; _status: string };
