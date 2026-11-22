@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { pageForPath } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   LayoutDashboard,
   Boxes,
@@ -65,6 +67,8 @@ export function AppShell({
   const location = useLocation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [wipeLocal, setWipeLocal] = useState(true);
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login" });
@@ -119,7 +123,7 @@ export function AppShell({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => signOut()}
+            onClick={() => setLogoutOpen(true)}
             className="rounded-lg p-2 hover:bg-sidebar-accent"
             aria-label="تسجيل الخروج"
           >
@@ -152,6 +156,36 @@ export function AppShell({
           </div>
         )}
       </main>
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>تسجيل الخروج</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2 py-2">
+            <Checkbox
+              id="wipe-local-data"
+              checked={wipeLocal}
+              onCheckedChange={(v) => setWipeLocal(v === true)}
+            />
+            <label htmlFor="wipe-local-data" className="text-sm cursor-pointer">
+              مسح البيانات المحلية المخزنة على هذا الجهاز
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => {
+                setLogoutOpen(false);
+                void signOut(wipeLocal);
+              }}
+            >
+              خروج
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

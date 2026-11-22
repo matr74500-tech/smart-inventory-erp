@@ -5,6 +5,12 @@ const DB_NAME = "smart-inventory-outbox";
 const STORE_NAME = "rpc_operations";
 const FALLBACK_KEY = "offline_rpc_queue_v1";
 
+export type ConflictInfo = {
+  server: Record<string, unknown>;
+  local: Record<string, unknown>;
+  serverUpdatedAt: string | null;
+};
+
 export type QueuedRpc = {
   id: string;
   name:
@@ -29,7 +35,24 @@ export type QueuedRpc = {
   createdAt: number;
   attempts: number;
   ownerId?: string;
+  conflict?: ConflictInfo;
+  status?: "manual";
 };
+
+export const RPC_MAX_ATTEMPTS = 6;
+export const RPC_BACKOFF_BASE_MS = 4000;
+export const RPC_BACKOFF_MAX_MS = 5 * 60 * 1000;
+
+/** تراجع تدريجي: 4، 8، 16… ثوانٍ (محدود بالمحاولات القصوى). */
+export function rpcBackoffDelayMs(attempts: number): number {
+  const exponent = Math.max(0, Math.min(attempts, 5));
+  return Math.min(RPC_BACKOFF_BASE_MS * 2 ** exponent, RPC_BACKOFF_MAX_MS);
+}
+
+/** هل تستمر المحاولة التلقائية لهذه العملية أم توقف بعد الحد الأقصى من الفشل؟ */
+export function rpcShouldAutoRetry(attempts: number): boolean {
+  return attempts < RPC_MAX_ATTEMPTS;
+}
 
 export function isTransientNetworkError(error: unknown): boolean {
   if (error instanceof TypeError) return true;
@@ -87,17 +110,7 @@ export async function enqueueRpc(
     attempts: 0,
     ownerId: authData.session.user.id,
   };
-  const db = await openDb();
-  if (!db) {
-    fallbackWrite([...fallbackRead(), item]);
-    return;
-  }
-  await new Promise<void>((resolve, reject) => {
-    const request = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(item);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  }).catch(() => fallbackWrite([...fallbackRead(), item]));
-  db.close();
+  await persistRpcItem(item);
 }
 
 export async function getRpcQueue(): Promise<QueuedRpc[]> {
@@ -129,4 +142,52 @@ export async function removeRpc(id: string): Promise<void> {
   }).catch(() => fallbackWrite(fallbackRead().filter((item) => item.id !== id)));
   fallbackWrite(fallbackRead().filter((item) => item.id !== id));
   db.close();
+}
+
+async function persistRpcItem(item: QueuedRpc): Promise<void> {
+  const db = await openDb();
+  if (!db) {
+    fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]);
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(item);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  }).catch(() => fallbackWrite([...fallbackRead().filter((entry) => entry.id !== item.id), item]));
+  db.close();
+}
+
+/** زيادة عداد المحاولات لعملية فاشلة (يُستخدم لسياسة التراجع التدريجي). */
+export async function recordRpcFailure(id: string): Promise<void> {
+  const queue = await getRpcQueue();
+  const item = queue.find((entry) => entry.id === id);
+  if (!item) return;
+  await persistRpcItem({ ...item, attempts: item.attempts + 1 });
+}
+
+/** حفظ حالة تعارض: السجل على الخادم أحدث من التعديل المحلي — توقف عن الاستبدال الصامت واحتفظ بالعملية في الطابور. */
+export async function setRpcConflict(id: string, conflict: ConflictInfo): Promise<void> {
+  const queue = await getRpcQueue();
+  const item = queue.find((entry) => entry.id === id);
+  if (!item) return;
+  await persistRpcItem({ ...item, conflict });
+}
+
+/** احذف حالة التعارض (مثلاً عند "اعتماد تعديدي" وإعادة التطبيق). */
+export async function clearRpcConflict(id: string): Promise<void> {
+  const queue = await getRpcQueue();
+  const item = queue.find((entry) => entry.id === id);
+  if (!item || !item.conflict) return;
+  const { conflict, ...rest } = item;
+  await persistRpcItem(rest);
+}
+
+/** حفظ حالة "تعديد يدوي" — ترك العملية محفوظة للمراجعة اليدوية (المحلي يتحمّل قرار تغيير البيانات). */
+export async function markRpcManual(id: string): Promise<void> {
+  const queue = await getRpcQueue();
+  const item = queue.find((entry) => entry.id === id);
+  if (!item) return;
+  const { conflict, ...rest } = item;
+  await persistRpcItem({ ...rest, status: "manual" });
 }

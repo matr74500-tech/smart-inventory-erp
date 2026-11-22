@@ -131,7 +131,11 @@ function ProductForm({
     setBusy(true);
     const productId = p?.id ?? crypto.randomUUID();
     const operationId = crypto.randomUUID();
-    const offlineRow = { ...allowedRow, image_url: p?.image_url ?? null };
+    const offlineRow = {
+      ...allowedRow,
+      updated_at: (p as { updated_at?: string | null } | undefined)?.updated_at ?? null,
+      image_url: p?.image_url ?? null,
+    };
     const offlineArgs = {
       _operation_id: operationId,
       _id: productId,

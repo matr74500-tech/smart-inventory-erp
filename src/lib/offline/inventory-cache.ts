@@ -3,6 +3,14 @@ import type { Tables } from "@/integrations/supabase/types";
 const DB_NAME = "smart-inventory-cache";
 const STORE_NAME = "snapshots";
 
+/** مدة صلاحية (TTL) للبيانات المخزنة في الكاش (7 أيام). */
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isExpired(savedAt?: number): boolean {
+  if (typeof savedAt !== "number" || Number.isNaN(savedAt)) return false;
+  return Date.now() - savedAt > CACHE_TTL_MS;
+}
+
 export type InventorySnapshot = {
   products: Tables<"products">[];
   warehouses: Tables<"warehouses">[];
@@ -52,17 +60,23 @@ export async function getInventorySnapshot(userId: string): Promise<InventorySna
     request.onerror = () => reject(request.error);
   }).catch(() => null);
   db.close();
+  if (!snapshot || isExpired(snapshot.savedAt)) {
+    // البيانات منتهية الصلاحية: احذفها وأخبر المتصل بالعودة للقيم الحية
+    void wipeInventoryCache(userId);
+    return null;
+  }
   return snapshot;
 }
 
 export async function savePrivateSnapshot<T>(userId: string, key: string, value: T) {
   const db = await openCache();
   if (!db) return;
+  const stored: { value: T; savedAt: number } = { value, savedAt: Date.now() };
   await new Promise<void>((resolve, reject) => {
     const request = db
       .transaction(STORE_NAME, "readwrite")
       .objectStore(STORE_NAME)
-      .put(value, `${userId}:${key}`);
+      .put(stored, `${userId}:${key}`);
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
   }).catch(() => undefined);
@@ -72,16 +86,22 @@ export async function savePrivateSnapshot<T>(userId: string, key: string, value:
 export async function getPrivateSnapshot<T>(userId: string, key: string): Promise<T | null> {
   const db = await openCache();
   if (!db) return null;
-  const value = await new Promise<T | null>((resolve, reject) => {
+  const stored = await new Promise<{ value: T; savedAt: number } | null>((resolve, reject) => {
     const request = db
       .transaction(STORE_NAME, "readonly")
       .objectStore(STORE_NAME)
       .get(`${userId}:${key}`);
-    request.onsuccess = () => resolve((request.result as T | undefined) ?? null);
+    request.onsuccess = () =>
+      resolve((request.result as { value: T; savedAt: number } | undefined) ?? null);
     request.onerror = () => reject(request.error);
   }).catch(() => null);
   db.close();
-  return value;
+  if (!stored) return null;
+  if (isExpired(stored.savedAt)) {
+    void wipeInventoryCache(userId);
+    return null;
+  }
+  return stored.value ?? null;
 }
 
 export async function patchCachedInventoryRow(
@@ -99,4 +119,28 @@ export async function patchCachedInventoryRow(
       ? [...list, { ...row, id }]
       : list.map((item, i) => (i === index ? { ...item, ...row } : item));
   await saveInventorySnapshot(userId, { ...snapshot, [collection]: updated });
+}
+
+/**
+ * مسح جميع بيانات IndexedDB الخاصة بالمستخدم (اللقطات الرئيسية لكل userId
+ * واللقطات الخاصة لكل userId:key).
+ */
+export async function wipeInventoryCache(userId: string): Promise<void> {
+  const db = await openCache();
+  if (!db) return;
+  const prefix = `${userId}:`;
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(STORE_NAME, "readwrite");
+    const store = request.objectStore(STORE_NAME);
+    store.delete(userId);
+    const allKeysReq = store.getAllKeys();
+    allKeysReq.onsuccess = () => {
+      for (const key of allKeysReq.result) {
+        if (typeof key === "string" && key.startsWith(prefix)) store.delete(key);
+      }
+    };
+    request.oncomplete = () => resolve();
+    request.onerror = () => reject(request.error);
+  }).catch(() => undefined);
+  db.close();
 }

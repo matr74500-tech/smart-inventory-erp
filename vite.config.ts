@@ -5,6 +5,7 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   nitro: {
@@ -12,6 +13,38 @@ export default defineConfig({
   },
   vite: {
     appType: "spa",
+    plugins: [
+      VitePWA({
+        registerType: "autoUpdate",
+        base: "/",
+        scope: "/",
+        filename: "sw.js",
+        outDir: ".vercel/output/static",
+        workbox: {
+          globPatterns: ["**/*.{js,css,ico,html}"],
+          runtimeCaching: [
+            {
+              // Cache the Google Fonts CSS + webfonts so the app renders its
+              // normal typeface (Cairo / Tajawal) even when reopened offline.
+              urlPattern: new RegExp("https://fonts\\.(?:gstatic|googleapis)\\.com/"),
+              handler: "StaleWhileRevalidate",
+              options: { cacheName: "google-fonts" },
+            },
+          ],
+        },
+        manifest: {
+          name: "Smart Inventory ERP",
+          short_name: "Smart Inv",
+          description: "نظام إدارة المخزون ونقاط البيع",
+          start_url: "/",
+          display: "standalone",
+          orientation: "any",
+          background_color: "#f8fafc",
+          theme_color: "#0f172a",
+          icons: [{ src: "/favicon.ico", sizes: "any", type: "image/x-icon", purpose: "any" }],
+        },
+      }),
+    ],
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

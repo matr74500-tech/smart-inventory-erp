@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CloudUpload, Download, Trash2, Loader2 } from "lucide-react";
+import { CloudUpload, Download, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/backup")({
@@ -52,6 +53,114 @@ const TABLES = [
 ] as const;
 type Row = { id: string; created_at: string; size_bytes: number };
 
+type TableName = keyof Database["public"]["Tables"];
+
+type BackupData = {
+  app?: string;
+  version?: number;
+  created_at?: string;
+  table_count?: number;
+  row_counts?: Record<string, number>;
+  tables?: Record<string, unknown[]>;
+};
+
+const CURRENT_BACKUP_VERSION = 2;
+
+/** Dependencias entre tablas (FKs) para un orden seguro al restaurar. */
+const RESTORE_DEPS: Record<string, string[]> = {
+  products: ["categories", "warehouses"],
+  purchase_invoices: ["warehouses"],
+  purchase_items: ["products", "purchase_invoices"],
+  reorder_requests: ["products", "warehouses"],
+  stock: ["products", "warehouses"],
+  stock_movements: ["products", "warehouses"],
+  customer_payment_plans: ["customers"],
+  sales_invoices: ["customers"],
+  sales_items: ["sales_invoices", "products"],
+  vouchers: ["customers"],
+  product_suppliers: ["products", "suppliers"],
+  purchase_order_items: ["purchase_orders", "products"],
+};
+
+function restoreOrder(names: string[]): string[] {
+  const wanted = new Set(names);
+  const done = new Set<string>();
+  const out: string[] = [];
+  const visit = (t: string) => {
+    if (done.has(t) || !wanted.has(t)) return;
+    done.add(t);
+    for (const dep of RESTORE_DEPS[t] ?? []) visit(dep);
+    out.push(t);
+  };
+  names.forEach(visit);
+  return out;
+}
+
+/** Lee y valida estructura + compatibilidad del archivo JSON del backup. */
+async function readBackupFile(file: File): Promise<BackupData | string> {
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    return "تعذر قراءة الملف";
+  }
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return "الملف ليس JSON صالحاً";
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    return "تنسيق الملف غير صالح (يجب أن يكون كائنًا)";
+  }
+  const obj = data as Record<string, unknown>;
+  if (obj["app"] !== undefined && obj["app"] !== "suhailsoft") {
+    return "هذا الملف لمنصة أخرى";
+  }
+  const version = obj["version"];
+  if (typeof version === "number" && version > CURRENT_BACKUP_VERSION) {
+    return `نسخة الملف أحدث من هذه النسخة (${version} > ${CURRENT_BACKUP_VERSION})`;
+  }
+  const tables = obj["tables"];
+  if (typeof tables !== "object" || tables === null || Array.isArray(tables)) {
+    return "تنسيق الملف غير صالح (القسم tables مفقود)";
+  }
+  for (const [name, rows] of Object.entries(tables)) {
+    if (!Array.isArray(rows)) return `الجدول "${name}" لا يحتوي على مصفوفة صالحة`;
+  }
+  return data as BackupData;
+}
+
+/** ملخص معاينة: عدد السجلات لكل جدول موجود في الملف. */
+function previewRows(data: BackupData): Array<{ name: string; count: number }> {
+  const counts = data.row_counts ?? {};
+  return Object.entries(data.tables ?? {}).map(([name, rows]) => ({
+    name,
+    count: Array.isArray(rows) ? rows.length : (counts[name] ?? 0),
+  }));
+}
+
+/** Ejecuta la restauración: inserciones con onConflict=id + ignoreDuplicates para no sobrescribir datos existentes. */
+async function executeRestore(
+  data: BackupData,
+): Promise<{ ok: boolean; message: string }> {
+  const tables = data.tables ?? {};
+  const names = Object.keys(tables).filter((t) => {
+    const rows = tables[t];
+    return Array.isArray(rows) && rows.length > 0;
+  });
+  let total = 0;
+  for (const t of restoreOrder(names)) {
+    const rows = tables[t] as Record<string, unknown>[];
+    const { error } = await supabase
+      .from(t as TableName)
+      .upsert(rows as never, { onConflict: "id", ignoreDuplicates: true });
+    if (error) return { ok: false, message: `${t}: ${error.message}` };
+    total += rows.length;
+  }
+  return { ok: true, message: `تمت الاستعادة: ${total} سجل` };
+}
+
 async function collect() {
   const out: Record<string, unknown[]> = {};
   const rowCounts: Record<string, number> = {};
@@ -99,6 +208,10 @@ const fname = (d: string) => `suhailsoft-backup-${d.slice(0, 16).replace(/[:T]/g
 function BackupPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState("");
+  const [file, setFile] = useState<BackupData | null>(null);
+  const [preview, setPreview] = useState<Array<{ name: string; count: number }> | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const load = () =>
     supabase
       .from("backups")
@@ -140,6 +253,40 @@ function BackupPage() {
     load();
   }
 
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = ""; // allow selecting the same file again
+    if (!f) return;
+    const result = await readBackupFile(f);
+    if (typeof result === "string") {
+      toast.error(result);
+      setFile(null);
+      setPreview(null);
+      return;
+    }
+    setFile(result);
+    setPreview(previewRows(result));
+  }
+
+  async function runRestore() {
+    if (!file) return;
+    setRestoring(true);
+    try {
+      const msg = await executeRestore(file);
+      if (msg.ok) {
+        toast.success(msg.message);
+        setFile(null);
+        setPreview(null);
+      } else {
+        toast.error(msg.message);
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <AppShell title="النسخ الاحتياطي" roles={["admin"]}>
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
@@ -171,6 +318,61 @@ function BackupPage() {
             تنزيل نسخة
           </Button>
         </div>
+      </div>
+      <div className="rounded-xl bg-card shadow-card p-5 space-y-4 mb-6">
+        <div className="font-bold">استعادة من ملف (استيراد)</div>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm font-semibold text-destructive">
+          ⚠️ تنبيه: الاستعادة تشمل بيانات الجداول فقط — لا تشمل حسابات المصادقة (Auth) أو
+          ملفات الصور في Storage.
+        </div>
+        <p className="text-sm text-muted-foreground">
+          رفع ملف نسخ احتياطي (JSON) لاستعادة بيانات الجداول من هذا الجهاز.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleFile}
+          />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={!!restoring}>
+            اختيار ملف النسخ الاحتياطي
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {file
+              ? file.created_at
+                ? `الملف: ${new Date(file.created_at).toLocaleString("ar")}`
+                : "لم يتم اختيار ملف"
+              : "لم يتم اختيار ملف"}
+          </span>
+        </div>
+        {file && preview && (
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">
+              معاينة الاستعادة (عدد السجلات لكل جدول):
+            </div>
+            <div className="max-h-56 overflow-y-auto text-sm space-y-1">
+              {preview.map((p) => (
+                <div key={p.name} className="flex justify-between">
+                  <span dir="ltr">{p.name}</span>
+                  <span>{p.count} سجل{p.count === 1 ? "" : "ات"}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              المجموع: {preview.reduce((a, p) => a + p.count, 0)} سجل
+            </div>
+          </div>
+        )}
+        <Button onClick={runRestore} disabled={!file || !!restoring}>
+          {restoring ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Upload className="size-4" />
+          )}{" "}
+          ابدأ الاستعادة
+        </Button>
       </div>
       <div className="rounded-xl bg-card shadow-card divide-y">
         <div className="p-4 font-bold">النسخ المحفوظة في السحابة</div>

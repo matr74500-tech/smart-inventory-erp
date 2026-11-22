@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isPermitted, type PermissionSet } from "@/lib/permissions";
+import { wipeInventoryCache } from "@/lib/offline/inventory-cache";
 
 export type Role = "admin" | "storekeeper" | "cashier";
 export const ROLE_LABELS: Record<Role, string> = {
@@ -19,7 +20,7 @@ type AuthState = {
   canPage: (key: string) => boolean;
   canAction: (key: string) => boolean;
   canField: (key: string) => boolean;
-  signOut: () => Promise<void>;
+  signOut: (wipeLocalData?: boolean) => Promise<void>;
 };
 
 const Ctx = createContext<AuthState | null>(null);
@@ -82,7 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canPage,
         canAction,
         canField,
-        signOut: async () => void (await supabase.auth.signOut()),
+        signOut: async (wipeLocalData = false) => {
+          const id = session?.user.id;
+          if (wipeLocalData && id) await wipeInventoryCache(id);
+          await supabase.auth.signOut();
+        },
       }}
     >
       {children}

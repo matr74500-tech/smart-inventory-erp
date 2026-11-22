@@ -20,3 +20,22 @@ describe("arabic search", () => {
     expect(loginIdentifierToEmail(" Ali ")).toBe("ali@users.suhailsoft.app");
   });
 });
+
+describe("matchesSearch", () => {
+  it("matches on any field and returns true for an empty query", () => {
+    expect(matchesSearch(["اسم", "كود"], "كود")).toBe(true);
+    expect(matchesSearch(["سكر"], "")).toBe(true);
+    expect(matchesSearch([null, undefined], "سكر")).toBe(false);
+  });
+
+  it("ignores diacritics in stored text and query", () => {
+    expect(matchesSearch(["علبة حليب"], "حليب")).toBe(true);
+    expect(matchesSearch(["علبة"], "علب")).toBe(true);
+    expect(matchesSearch(["علبة"], "علبة")).toBe(true);
+  });
+
+  it("treats letter forms آ أ إ ى ة as equivalent", () => {
+    expect(matchesSearch(["آلة"], "اله")).toBe(true);
+    expect(matchesSearch(["قلم"], "ي")).toBe(false);
+  });
+});
