@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { findByCode, PRICE_TIERS, type PriceKey } from "@/lib/inventory-utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -203,28 +204,44 @@ function SalesPage() {
     }
 
     const selectedCustomer = customers.find((item) => item.id === customerId);
+    const operationId = draftId ?? crypto.randomUUID();
+    const args = {
+      _id: operationId,
+      _customer_id: selectedCustomer?.id ?? null,
+      _customer_name: selectedCustomer?.name ?? null,
+      _warehouse: warehouse,
+      _currency_code: currency,
+      _rate_to_yer: Number(currentRate),
+      _payment_method: paymentMethod,
+      _affects_drawer: paymentMethod.includes("نقدي") || paymentMethod.startsWith("سعودي"),
+      _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
+      _discount_yer: discountVal,
+      _tax_yer: taxVal,
+      _notes: null,
+      _items: cart.map((item) => ({
+        product_id: item.product.id,
+        quantity: item.qty,
+        unit_price_yer: item.price,
+        price_tier: item.tier,
+      })),
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+      setDraftId(operationId);
+      toast.success("تم حفظ مسودة البيع محليًا وستتم مزامنتها عند عودة الاتصال");
+      return operationId;
+    }
     try {
       const { data, error } = await supabase.rpc("save_sale_draft", {
-        _id: draftId,
-        _customer_id: selectedCustomer?.id ?? null,
-        _customer_name: selectedCustomer?.name ?? null,
-        _warehouse: warehouse,
-        _currency_code: currency,
-        _rate_to_yer: Number(currentRate),
-        _payment_method: paymentMethod,
-        _affects_drawer: paymentMethod.includes("نقدي") || paymentMethod.startsWith("سعودي"),
-        _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
-        _discount_yer: discountVal,
-        _tax_yer: taxVal,
-        _notes: null,
-        _items: cart.map((item) => ({
-          product_id: item.product.id,
-          quantity: item.qty,
-          unit_price_yer: item.price,
-          price_tier: item.tier,
-        })),
+        ...args,
       });
       if (error) {
+        if (/network|fetch|offline|failed/i.test(error.message)) {
+          await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+          setDraftId(operationId);
+          toast.success("تعذر الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
+          return operationId;
+        }
         toast.error(`تعذر حفظ المسودة: ${error.message}`);
         return null;
       }

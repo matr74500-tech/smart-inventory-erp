@@ -1221,6 +1221,24 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["customer_payment_plans"]["Row"];
       };
+      save_sale_draft_offline: {
+        Args: {
+          _affects_drawer: boolean;
+          _currency_code: string;
+          _customer_id: string | null;
+          _customer_name: string | null;
+          _discount_yer: number;
+          _id: string;
+          _items: Json;
+          _notes: string | null;
+          _paid_amount: number;
+          _payment_method: string;
+          _rate_to_yer: number;
+          _tax_yer: number;
+          _warehouse: string;
+        };
+        Returns: string;
+      };
       refresh_payment_plan_statuses: { Args: never; Returns: undefined };
       update_payment_plan_status: {
         Args: { _id: string; _status: string };
