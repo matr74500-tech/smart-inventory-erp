@@ -11,6 +11,7 @@ import { matchesSearch } from "@/lib/arabic";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,25 @@ function StocktakePage() {
     const v = drafts[productId];
     if (v === undefined || v === "") return;
     setSaving(productId);
+    const operationId = crypto.randomUUID();
+    const args = {
+      _operation_id: operationId,
+      _product: productId,
+      _warehouse: warehouse,
+      _qty: Number(v),
+      _kind: kind,
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "set_stock_offline", args });
+      setSaving(null);
+      setDrafts((d) => {
+        const n = { ...d };
+        delete n[productId];
+        return n;
+      });
+      toast.success("تم حفظ تسوية الجرد محليًا للمزامنة");
+      return;
+    }
     const { error } = await supabase.rpc("set_stock", {
       _product: productId,
       _warehouse: warehouse,

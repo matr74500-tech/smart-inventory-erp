@@ -8,6 +8,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -68,6 +69,22 @@ function TransfersPage() {
     }
     setBusy(true);
     try {
+      const operationId = crypto.randomUUID();
+      const args = {
+        _operation_id: operationId,
+        _product: product,
+        _from_wh: from,
+        _from_shelf: fromShelf.trim(),
+        _to_wh: to,
+        _to_shelf: toShelf.trim(),
+        _qty: Number(amount),
+      };
+      if (!navigator.onLine) {
+        await enqueueRpc({ id: operationId, name: "transfer_shelf_stock_offline", args });
+        toast.success("تم حفظ التحويل محليًا للمزامنة عند عودة الاتصال");
+        setAmount("");
+        return;
+      }
       const { error } = await supabase.rpc("transfer_shelf_stock", {
         _product: product,
         _from_wh: from,

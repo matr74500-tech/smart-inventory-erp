@@ -262,6 +262,16 @@ function SalesPage() {
       return;
     }
     try {
+      const operationId = crypto.randomUUID();
+      if (!navigator.onLine) {
+        await enqueueRpc({
+          id: operationId,
+          name: "post_sale_offline",
+          args: { _operation_id: operationId, _id: id },
+        });
+        toast.success("تم حفظ طلب ترحيل الفاتورة محليًا للمزامنة");
+        return;
+      }
       const { error } = await supabase.rpc("post_sale", { _id: id });
       if (error) {
         toast.error(`تعذر ترحيل الفاتورة؛ حُفظت كمسودة: ${error.message}`);

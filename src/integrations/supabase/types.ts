@@ -1249,6 +1249,33 @@ export type Database = {
         };
         Returns: string;
       };
+      post_sale_offline: { Args: { _id: string; _operation_id: string }; Returns: undefined };
+      post_purchase_offline: {
+        Args: { _items: Json; _operation_id: string; _supplier: string; _warehouse: string };
+        Returns: string;
+      };
+      set_stock_offline: {
+        Args: {
+          _kind?: string;
+          _operation_id: string;
+          _product: string;
+          _qty: number;
+          _warehouse: string;
+        };
+        Returns: undefined;
+      };
+      transfer_shelf_stock_offline: {
+        Args: {
+          _from_shelf: string;
+          _from_wh: string;
+          _operation_id: string;
+          _product: string;
+          _qty: number;
+          _to_shelf: string;
+          _to_wh: string;
+        };
+        Returns: undefined;
+      };
       refresh_payment_plan_statuses: { Args: never; Returns: undefined };
       update_payment_plan_status: {
         Args: { _id: string; _status: string };

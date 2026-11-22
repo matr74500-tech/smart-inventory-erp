@@ -10,6 +10,7 @@ import { matchesSearch } from "@/lib/arabic";
 import { findByCode, num, readSheet, str, toBaseQty } from "@/lib/inventory-utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -147,6 +148,19 @@ function PurchasesPage() {
       price: canAction("prices.update") && canField("price") ? l.price : "",
       price_wholesale: canAction("prices.update") && canField("price_wholesale") ? l.wholesale : "",
     }));
+    const operationId = crypto.randomUUID();
+    const args = {
+      _operation_id: operationId,
+      _supplier: supplier || "",
+      _warehouse: warehouse,
+      _items: items,
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "post_purchase_offline", args });
+      setBusy(false);
+      toast.success("تم حفظ فاتورة الشراء محليًا للمزامنة");
+      return;
+    }
     const { error } = await supabase.rpc("post_purchase", {
       _supplier: supplier || "",
       _warehouse: warehouse,

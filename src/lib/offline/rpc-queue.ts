@@ -6,7 +6,14 @@ const FALLBACK_KEY = "offline_rpc_queue_v1";
 
 export type QueuedRpc = {
   id: string;
-  name: "save_payment_plan" | "save_sale_draft_offline" | "save_purchase_order_draft_offline";
+  name:
+    | "save_payment_plan"
+    | "save_sale_draft_offline"
+    | "save_purchase_order_draft_offline"
+    | "post_sale_offline"
+    | "post_purchase_offline"
+    | "set_stock_offline"
+    | "transfer_shelf_stock_offline";
   args: Record<string, Json>;
   createdAt: number;
   attempts: number;
