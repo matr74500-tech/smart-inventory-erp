@@ -22,30 +22,70 @@ export const Route = createFileRoute("/backup")({
 
 const TABLES = [
   "app_settings",
+  "profiles",
+  "user_roles",
+  "employee_permissions",
   "categories",
   "units",
   "custom_fields",
   "warehouses",
+  "currencies",
+  "exchange_rates",
   "products",
   "stock",
   "stock_minimums",
   "stock_movements",
   "purchase_invoices",
   "purchase_items",
+  "purchase_orders",
+  "purchase_order_items",
+  "suppliers",
+  "product_suppliers",
   "reorder_requests",
+  "customers",
+  "customer_payment_plans",
+  "sales_invoices",
+  "sales_items",
+  "vouchers",
+  "cash_transactions",
+  "daily_cash_closings",
 ] as const;
 type Row = { id: string; created_at: string; size_bytes: number };
 
 async function collect() {
   const out: Record<string, unknown[]> = {};
+  const rowCounts: Record<string, number> = {};
   for (const t of TABLES) {
-    const { data, error } = await (t === "products"
-      ? supabase.rpc("visible_products")
-      : supabase.from(t).select("*").limit(100000));
-    if (error) throw error;
-    out[t] = data ?? [];
+    if (t === "products") {
+      const { data, error } = await supabase.rpc("visible_products");
+      if (error) throw error;
+      out[t] = data ?? [];
+      rowCounts[t] = data?.length ?? 0;
+      continue;
+    }
+
+    const rows: unknown[] = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from(t)
+        .select("*")
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+      if (!data || data.length < pageSize) break;
+    }
+    out[t] = rows;
+    rowCounts[t] = rows.length;
   }
-  return { app: "suhailsoft", version: 1, created_at: new Date().toISOString(), tables: out };
+  return {
+    app: "suhailsoft",
+    version: 2,
+    created_at: new Date().toISOString(),
+    table_count: TABLES.length,
+    row_counts: rowCounts,
+    tables: out,
+  };
 }
 function download(obj: unknown, name: string) {
   const a = document.createElement("a");

@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { History, User, Calendar, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { getMovements, type MovementLogEntry } from "@/lib/inventory-utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useInventory } from "@/hooks/use-inventory";
+import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/movements")({
   head: () => ({
@@ -18,17 +20,46 @@ export const Route = createFileRoute("/movements")({
 });
 
 function MovementsPage() {
-  const [movements, setMovements] = useState<MovementLogEntry[]>([]);
+  const { products, warehouses } = useInventory();
+  const [movements, setMovements] = useState<Tables<"stock_movements">[]>([]);
   const [hasError, setHasError] = useState(false);
+  const productNames = useMemo(
+    () => new Map(products.map((item) => [item.id, item.name])),
+    [products],
+  );
+  const warehouseNames = useMemo(
+    () => new Map(warehouses.map((item) => [item.id, item.name])),
+    [warehouses],
+  );
 
   useEffect(() => {
-    try {
-      const items = getMovements();
-      setMovements(Array.isArray(items) ? items.slice(-200).reverse() : []);
-    } catch {
-      setHasError(true);
-      setMovements([]);
-    }
+    let active = true;
+    const loadMovements = async () => {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (!active) return;
+      if (error) {
+        setHasError(true);
+        setMovements([]);
+      } else {
+        setHasError(false);
+        setMovements(data ?? []);
+      }
+    };
+    void loadMovements();
+    const channel = supabase
+      .channel("stock-movements-page")
+      .on("postgres_changes", { event: "*", schema: "public", table: "stock_movements" }, () => {
+        void loadMovements();
+      })
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   return (
@@ -39,13 +70,14 @@ function MovementsPage() {
             <History className="size-5 text-primary" />{" "}
             <span className="font-bold">سجل الحركات المخزنية المعتمد</span>
           </div>
-          <div className="text-xs text-muted-foreground">عرض آخر {movements.length} حركة مسجلة</div>
+          <div className="text-xs text-muted-foreground">
+            عرض آخر {movements.length} حركة معتمدة
+          </div>
         </div>
 
         {hasError && (
           <div className="rounded-xl bg-destructive/10 text-destructive p-4 flex items-center gap-2 text-sm">
-            <AlertTriangle className="size-5" /> حدث خطأ أثناء استرداد بعض السجلات محلياً، يتم عرض
-            البيانات المتاحة.
+            <AlertTriangle className="size-5" /> تعذر تحميل سجل الحركات من قاعدة البيانات.
           </div>
         )}
 
@@ -62,28 +94,35 @@ function MovementsPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {movements.map((m, idx) => {
+              {movements.map((m) => {
                 let formattedDate = "—";
-                if (m.at) {
-                  const date = new Date(m.at);
+                if (m.created_at) {
+                  const date = new Date(m.created_at);
                   if (!Number.isNaN(date.getTime())) formattedDate = date.toLocaleString("ar");
                 }
                 return (
-                  <tr key={idx} className="hover:bg-muted/50">
+                  <tr key={m.id} className="hover:bg-muted/50">
                     <td className="p-3 font-semibold">
                       <span className="px-2 py-1 rounded bg-primary/10 text-primary">
-                        {m?.type || "حركة"}
+                        {m.kind || "حركة"}
                       </span>
                     </td>
-                    <td className="p-3 font-mono text-xs">{m?.productId || "—"}</td>
-                    <td className="p-3 font-bold">{m?.qty ?? 0}</td>
+                    <td className="p-3 text-xs">
+                      {productNames.get(m.product_id) || m.product_id}
+                    </td>
+                    <td className="p-3 font-bold">{m.quantity}</td>
                     <td className="p-3 flex items-center gap-1.5">
-                      <User className="size-4 text-muted-foreground" /> {m?.user || "النظام"}
+                      <User className="size-4 text-muted-foreground" /> {m.user_id || "النظام"}
                     </td>
-                    <td className="p-3 text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="size-3.5" /> {formattedDate}
+                    <td className="p-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="size-3.5" /> {formattedDate}
+                      </span>
+                      <div className="text-[11px]">
+                        {warehouseNames.get(m.warehouse_id) || "المستودع"}
+                      </div>
                     </td>
-                    <td className="p-3 text-muted-foreground">{m?.note || "—"}</td>
+                    <td className="p-3 text-muted-foreground">{m.note || "—"}</td>
                   </tr>
                 );
               })}

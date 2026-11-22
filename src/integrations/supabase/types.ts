@@ -128,6 +128,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      customer_payment_plans: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          customer_id: string;
+          due_date: string;
+          id: string;
+          installments_count: number;
+          status: string;
+          total_amount_yer: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          customer_id: string;
+          due_date: string;
+          id?: string;
+          installments_count?: number;
+          status?: string;
+          total_amount_yer: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          customer_id?: string;
+          due_date?: string;
+          id?: string;
+          installments_count?: number;
+          status?: string;
+          total_amount_yer?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_payment_plans_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       currencies: {
         Row: {
           active: boolean;
@@ -1166,6 +1210,20 @@ export type Database = {
           _secondary_phone: string | null;
         };
         Returns: string;
+      };
+      save_payment_plan: {
+        Args: {
+          _customer_id: string;
+          _due_date: string;
+          _installments_count: number;
+          _total_amount_yer: number;
+        };
+        Returns: Database["public"]["Tables"]["customer_payment_plans"]["Row"];
+      };
+      refresh_payment_plan_statuses: { Args: never; Returns: undefined };
+      update_payment_plan_status: {
+        Args: { _id: string; _status: string };
+        Returns: Database["public"]["Tables"]["customer_payment_plans"]["Row"];
       };
       save_product_attributes: {
         Args: { _attributes: Json; _product: string };

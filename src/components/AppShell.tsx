@@ -26,6 +26,7 @@ import {
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
   { to: "/", label: "الرئيسية", icon: LayoutDashboard },
@@ -83,6 +84,7 @@ export function AppShell({
 
   return (
     <div dir="rtl" className="min-h-screen md:flex print:block">
+      <OfflineBanner />
       <aside className="no-print bg-sidebar text-sidebar-foreground md:w-64 md:min-h-screen md:sticky md:top-0 flex md:flex-col">
         <div className="hidden md:block p-5 border-b border-sidebar-border">
           <div className="font-display text-xl font-bold">نظام المخزون الذكي</div>

@@ -31,7 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { logMovement } from "@/lib/inventory-utils";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/hooks/use-inventory";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,8 +76,19 @@ type PaymentPlan = {
   totalAmount: number;
   installmentsCount: number;
   dueDate: string;
-  status: "active" | "completed" | "overdue";
+  status: "active" | "completed" | "overdue" | "cancelled";
 };
+
+function mapPaymentPlan(row: Tables<"customer_payment_plans">): PaymentPlan {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    totalAmount: row.total_amount_yer,
+    installmentsCount: row.installments_count,
+    dueDate: row.due_date,
+    status: row.status as PaymentPlan["status"],
+  };
+}
 
 type Voucher = {
   id: string;
@@ -136,13 +146,7 @@ function CustomersPage() {
   const { voucher: voucherShortcut } = Route.useSearch();
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const [plans, setPlans] = useState<PaymentPlan[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("suhail_payment_plans") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
 
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
 
@@ -173,15 +177,23 @@ function CustomersPage() {
   useEffect(() => {
     let active = true;
     const loadFinancialData = async () => {
-      const [customerResult, voucherResult] = await Promise.all([
+      const { error: statusError } = await supabase.rpc("refresh_payment_plan_statuses");
+      if (statusError) toast.error(`تعذر تحديث حالات خطط السداد: ${statusError.message}`);
+      const [customerResult, voucherResult, planResult] = await Promise.all([
         supabase.from("customers").select("*").eq("active", true).order("name"),
         supabase.from("vouchers").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("customer_payment_plans")
+          .select("*")
+          .order("created_at", { ascending: false }),
       ]);
       if (!active) return;
       if (customerResult.error) toast.error(`تعذر تحميل العملاء: ${customerResult.error.message}`);
       else setCustomers((customerResult.data ?? []).map(mapCustomer));
       if (voucherResult.error) toast.error(`تعذر تحميل السندات: ${voucherResult.error.message}`);
       else setVouchers((voucherResult.data ?? []).map(mapVoucher));
+      if (planResult.error) toast.error(`تعذر تحميل خطط السداد: ${planResult.error.message}`);
+      else setPlans((planResult.data ?? []).map(mapPaymentPlan));
     };
     void loadFinancialData();
     const channel = supabase
@@ -194,6 +206,11 @@ function CustomersPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "vouchers" },
+        () => void loadFinancialData(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customer_payment_plans" },
         () => void loadFinancialData(),
       )
       .subscribe();
@@ -326,32 +343,43 @@ function CustomersPage() {
     setOpenVoucher(false);
   };
 
-  const savePlan = (e: FormEvent) => {
+  const savePlan = async (e: FormEvent) => {
     e.preventDefault();
     if (!pCustId || !pAmount || !pDate) {
       toast.error("جميع الحقول مطلوبة");
       return;
     }
-    const newPlan: PaymentPlan = {
-      id: Date.now().toString(),
-      customerId: pCustId,
-      totalAmount: Number(pAmount) || 0,
-      installmentsCount: Number(pCount) || 3,
-      dueDate: pDate,
-      status: "active",
-    };
-    const next = [newPlan, ...plans];
-    setPlans(next);
-    localStorage.setItem("suhail_payment_plans", JSON.stringify(next));
-    logMovement(
-      pCustId,
-      "خطة سداد",
-      Number(pAmount),
-      `إنشاء خطة سداد بقيمة ${pAmount} على ${pCount} أقساط`,
-    );
+    const { data, error } = await supabase.rpc("save_payment_plan", {
+      _customer_id: pCustId,
+      _total_amount_yer: Number(pAmount),
+      _installments_count: Number(pCount) || 3,
+      _due_date: pDate,
+    });
+    if (error || !data) {
+      toast.error(`تعذر إنشاء خطة السداد: ${error?.message || "استجابة غير صالحة"}`);
+      return;
+    }
+    setPlans((items) => [mapPaymentPlan(data), ...items]);
     toast.success("تم إنشاء خطة السداد بنجاح");
     setPAmount("");
     setOpenPlan(false);
+  };
+
+  const updatePlanStatus = async (planId: string, status: "active" | "completed" | "cancelled") => {
+    if (!canAction("customers.manage")) {
+      toast.error("ليس لديك صلاحية تعديل خطط السداد");
+      return;
+    }
+    const { data, error } = await supabase.rpc("update_payment_plan_status", {
+      _id: planId,
+      _status: status,
+    });
+    if (error || !data) {
+      toast.error(`تعذر تحديث الخطة: ${error?.message || "استجابة غير صالحة"}`);
+      return;
+    }
+    setPlans((items) => items.map((item) => (item.id === planId ? mapPaymentPlan(data) : item)));
+    toast.success(status === "completed" ? "تم إكمال خطة السداد" : "تم إلغاء خطة السداد");
   };
 
   const deleteCust = async (id: string, custName: string) => {
@@ -435,7 +463,6 @@ function CustomersPage() {
     const url = `https://wa.me/967${c.phone.replace(/^0+/, "")}?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank");
     toast.success("تم فتح الواتساب للإرسال");
-    logMovement(c.id, "واتساب", 0, `إرسال رسالة واتساب للعميل: ${c.name}`);
   }
 
   return (
@@ -711,7 +738,40 @@ function CustomersPage() {
                         عدد الأقساط: {p.installmentsCount} · تاريخ الاستحقاق: {p.dueDate}
                       </div>
                     </div>
-                    <div className="text-left font-bold">{p.totalAmount} ر.ي</div>
+                    <div className="flex items-center gap-3 text-left">
+                      <div>
+                        <div className="font-bold">{p.totalAmount} ر.ي</div>
+                        <div className="text-xs text-muted-foreground">
+                          {p.status === "active"
+                            ? "نشطة"
+                            : p.status === "overdue"
+                              ? "متأخرة"
+                              : p.status === "completed"
+                                ? "مكتملة"
+                                : "ملغاة"}
+                        </div>
+                      </div>
+                      {(p.status === "active" || p.status === "overdue") && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="تحديد كمكتملة"
+                            onClick={() => void updatePlanStatus(p.id, "completed")}
+                          >
+                            <CheckCircle2 className="size-4 text-emerald-600" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="إلغاء الخطة"
+                            onClick={() => void updatePlanStatus(p.id, "cancelled")}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
