@@ -199,15 +199,17 @@ function CashPage() {
     let sales = 0;
     let receipts = 0;
     let payments = 0;
+    let refunds = 0;
     for (const transaction of shiftTx) {
       const amount = Number(transaction.amount);
       if (transaction.source_type === "sale") sales += amount;
+      else if (transaction.source_type === "return") refunds += amount;
       else if (transaction.source_type === "voucher") {
         if (amount >= 0) receipts += amount;
         else payments += amount;
       }
     }
-    return { sales, receipts, payments };
+    return { sales, receipts, payments, refunds };
   }, [shiftTx]);
 
   const shiftOpeningMap = useMemo(() => {
@@ -515,6 +517,10 @@ function CashPage() {
                   مصروفات/صرف:{" "}
                   <b className="text-destructive">{shiftBreakdown.payments.toFixed(2)}</b>
                 </span>
+                <span>
+                  مرتجعات/ردود:{" "}
+                  <b className="text-destructive">{shiftBreakdown.refunds.toFixed(2)}</b>
+                </span>
               </div>
               <div className="space-y-1">
                 <Label>ملاحظات الإقفال</Label>
@@ -691,8 +697,12 @@ function CashPage() {
                 >
                   <div>
                     <div className="font-medium">
-                      {transaction.source_type === "sale" ? "فاتورة بيع" : "سند نقدي"} ·{" "}
-                      {transaction.payment_method}
+                      {transaction.source_type === "sale"
+                        ? "فاتورة بيع"
+                        : transaction.source_type === "return"
+                          ? "مرتجع بيع"
+                          : "سند نقدي"}{" "}
+                      · {transaction.payment_method}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(transaction.created_at).toLocaleString("ar")} · رقم مرجعي{" "}
