@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Boxes,
   ClipboardCheck,
@@ -75,9 +76,70 @@ const TILES = [
   },
 ];
 
+// Quick operation shortcuts: number keys trigger them from the home page.
+const SHORTCUTS = [
+  {
+    key: "1",
+    label: "سند قبض",
+    desc: "تحصيل من عميل",
+    to: "/customers",
+    search: { voucher: "receipt" },
+    page: "customers",
+    icon: Receipt,
+    tone: "text-success",
+  },
+  {
+    key: "2",
+    label: "فاتورة جديدة",
+    desc: "فاتورة بيع",
+    to: "/sales",
+    search: { view: "invoice" },
+    page: "sales",
+    icon: FileText,
+    tone: "text-primary",
+  },
+  {
+    key: "3",
+    label: "سند صرف",
+    desc: "صرف إلى جهة",
+    to: "/customers",
+    search: { voucher: "payment" },
+    page: "customers",
+    icon: Receipt,
+    tone: "text-destructive",
+  },
+  {
+    key: "4",
+    label: "أمر شراء",
+    desc: "إنشاء أمر شراء",
+    to: "/purchase_orders",
+    search: {},
+    page: "purchase_orders",
+    icon: ShoppingCart,
+    tone: "text-primary",
+  },
+  {
+    key: "5",
+    label: "البيع السريع",
+    desc: "نقطة البيع",
+    to: "/sales",
+    search: { view: "pos" },
+    page: "sales",
+    icon: ShoppingCart,
+    tone: "text-success",
+  },
+] as const;
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+}
+
 function Dashboard() {
   const { products, warehouses, reorders, qty } = useInventory();
-  const { canPage, canField, can } = useAuth();
+  const { canPage, canField } = useAuth();
+  const navigate = useNavigate();
   const low = products.filter(
     (p) => Number(p.reorder_level) > 0 && qty(p.id) <= Number(p.reorder_level),
   );
@@ -90,8 +152,51 @@ function Dashboard() {
     { label: "طلبات توريد معلقة", value: pending, icon: Truck },
   ];
 
+  const visibleShortcuts = useMemo(() => SHORTCUTS.filter((s) => canPage(s.page)), [canPage]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTypingTarget(event.target)) return;
+      const shortcut = visibleShortcuts.find((s) => s.key === event.key);
+      if (!shortcut) return;
+      event.preventDefault();
+      void navigate({ to: shortcut.to as never, search: shortcut.search as never });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navigate, visibleShortcuts]);
+
   return (
     <AppShell title="لوحة التحكم">
+      {visibleShortcuts.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-bold">اختصارات العمليات</h2>
+            <span className="text-xs text-muted-foreground">
+              اضغط الرقم المقابل أثناء تواجدك في الصفحة الرئيسية
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {visibleShortcuts.map((s) => (
+              <Link
+                key={s.label}
+                to={s.to as never}
+                search={s.search as never}
+                className="group relative rounded-xl bg-card p-4 shadow-card hover:bg-accent"
+              >
+                <span className="absolute top-2 left-2 grid size-6 place-items-center rounded-md bg-muted text-xs font-bold text-muted-foreground group-hover:bg-background">
+                  {s.key}
+                </span>
+                <s.icon className={`size-5 ${s.tone}`} />
+                <div className="mt-2 font-semibold">{s.label}</div>
+                <div className="text-xs text-muted-foreground">{s.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {stats
           .filter((s) => canField("quantity") || ["الأصناف", "المستودعات"].includes(s.label))
@@ -107,7 +212,7 @@ function Dashboard() {
         {TILES.filter((t) => canPage(pageForPath(t.to))).map((t) => (
           <Link
             key={t.label}
-            to={t.to}
+            to={t.to as never}
             className={`rounded-2xl p-5 shadow-card transition-transform hover:-translate-y-1 ${t.tone}`}
           >
             <t.icon className="size-9" />
@@ -116,45 +221,6 @@ function Dashboard() {
           </Link>
         ))}
       </div>
-      {can("admin") && (
-        <section className="mt-8">
-          <h2 className="mb-3 font-bold">اختصارات العمليات</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link
-              to="/sales"
-              search={{ view: "pos" }}
-              className="rounded-xl bg-card p-4 shadow-card hover:bg-accent"
-            >
-              <ShoppingCart className="size-5 text-primary" />
-              <div className="mt-2 font-semibold">البيع السريع</div>
-            </Link>
-            <Link
-              to="/sales"
-              search={{ view: "invoice" }}
-              className="rounded-xl bg-card p-4 shadow-card hover:bg-accent"
-            >
-              <FileText className="size-5 text-primary" />
-              <div className="mt-2 font-semibold">فاتورة بيع جديدة</div>
-            </Link>
-            <Link
-              to="/customers"
-              search={{ voucher: "receipt" }}
-              className="rounded-xl bg-card p-4 shadow-card hover:bg-accent"
-            >
-              <Receipt className="size-5 text-success" />
-              <div className="mt-2 font-semibold">سند قبض</div>
-            </Link>
-            <Link
-              to="/customers"
-              search={{ voucher: "payment" }}
-              className="rounded-xl bg-card p-4 shadow-card hover:bg-accent"
-            >
-              <Receipt className="size-5 text-destructive" />
-              <div className="mt-2 font-semibold">سند صرف</div>
-            </Link>
-          </div>
-        </section>
-      )}
       {canField("quantity") && canField("reorder_level") && low.length > 0 && (
         <div className="mt-8 rounded-xl bg-card shadow-card p-5">
           <h2 className="font-bold mb-3 flex items-center gap-2">

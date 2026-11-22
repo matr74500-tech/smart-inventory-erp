@@ -24,6 +24,8 @@ import {
   DatabaseBackup,
   Trash2,
   Wallet,
+  Menu,
+  X,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
@@ -69,10 +71,21 @@ export function AppShell({
   const [searchOpen, setSearchOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [wipeLocal, setWipeLocal] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login" });
   }, [loading, session, navigate]);
+
+  // Auto-close the side panel whenever a dialog opens to maximize the workspace.
+  useEffect(() => {
+    if (searchOpen || logoutOpen) setNavOpen(false);
+  }, [searchOpen, logoutOpen]);
+
+  // Close the panel after navigating to another page.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
 
   if (loading || !session) {
     return (
@@ -87,14 +100,36 @@ export function AppShell({
     (!ADMIN_ONLY.includes(location.pathname) || can("admin"));
 
   return (
-    <div dir="rtl" className="min-h-screen md:flex print:block">
+    <div dir="rtl" className="min-h-screen print:block">
       <OfflineBanner />
-      <aside className="no-print bg-sidebar text-sidebar-foreground md:w-64 md:min-h-screen md:sticky md:top-0 flex md:flex-col">
-        <div className="hidden md:block p-5 border-b border-sidebar-border">
-          <div className="font-display text-xl font-bold">نظام المخزون الذكي</div>
-          <div className="text-xs opacity-70">نقاط البيع وإدارة المخزون</div>
+      {navOpen && (
+        <div
+          className="no-print fixed inset-0 z-30 bg-black/40 print:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={`no-print fixed top-0 right-0 z-40 flex h-screen w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground shadow-xl transition-transform duration-200 print:hidden ${
+          navOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex items-center gap-2 p-5 border-b border-sidebar-border">
+          <div className="flex-1">
+            <div className="font-display text-xl font-bold">نظام المخزون الذكي</div>
+            <div className="text-xs opacity-70">نقاط البيع وإدارة المخزون</div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setNavOpen(false)}
+            className="rounded-lg p-2 hover:bg-sidebar-accent"
+            aria-label="إغلاق القائمة"
+          >
+            <X className="size-5" />
+          </Button>
         </div>
-        <nav className="flex md:flex-col gap-1 p-2 overflow-x-auto flex-1">
+        <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
           {NAV.filter(
             (n) => canPage(pageForPath(n.to)) && (!ADMIN_ONLY.includes(n.to) || can("admin")),
           ).map((n) => (
@@ -114,7 +149,7 @@ export function AppShell({
           ))}
         </nav>
         <div className="p-3 md:border-t border-sidebar-border flex items-center gap-2">
-          <div className="hidden md:block flex-1 text-sm">
+          <div className="flex-1 text-sm">
             <div className="font-semibold">{username}</div>
             <div className="text-xs opacity-70">
               {myRoles.map((r) => ROLE_LABELS[r]).join("، ")}
@@ -131,8 +166,17 @@ export function AppShell({
           </Button>
         </div>
       </aside>
-      <main className="flex-1 min-w-0 p-4 md:p-8 max-w-7xl print:p-0 print:max-w-none">
+      <main className="min-w-0 p-4 md:p-8 max-w-7xl mx-auto print:p-0 print:max-w-none">
         <div className="no-print flex items-center gap-3 mb-6">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setNavOpen(true)}
+            className="shrink-0 rounded-lg"
+            aria-label="فتح القائمة"
+          >
+            <Menu className="size-5" />
+          </Button>
           <h1 className="flex-1 text-2xl md:text-3xl font-bold">{title}</h1>
           {canPage("inventory") && (
             <Button

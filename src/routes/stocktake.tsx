@@ -1,12 +1,12 @@
 import { useAuth } from "@/lib/auth";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Loader2, Search } from "lucide-react";
+import { Check, Loader2, Minus, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useInventory } from "@/hooks/use-inventory";
-import { countDiff } from "@/lib/inventory-utils";
+import { countDiff, findByCode } from "@/lib/inventory-utils";
 import { matchesSearch } from "@/lib/arabic";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -42,11 +42,15 @@ function StocktakePage() {
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [scannedId, setScannedId] = useState<string | null>(null);
+  const scannedRef = useRef<string | null>(null);
+  const quantityRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const warehouse = wh || warehouses[0]?.id || "";
   const list = useMemo(
     () => products.filter((p) => matchesSearch([p.name, p.barcode], q)),
     [products, q],
   );
+  const scannedProduct = scannedId ? products.find((p) => p.id === scannedId) : undefined;
 
   async function save(productId: string) {
     if (!canAction("stocktake.adjust")) return;
@@ -140,6 +144,10 @@ function StocktakePage() {
           setSaving(null);
           return;
         }
+        setSaving(null);
+        setDrafts({});
+        toast.success("تم اعتماد الجرد أو حفظه للمزامنة");
+        return;
       }
       if (error) {
         if (/network|fetch|offline|failed/i.test(error.message)) {
@@ -153,7 +161,73 @@ function StocktakePage() {
     }
     setSaving(null);
     setDrafts({});
+    setScannedId(null);
+    scannedRef.current = null;
     toast.success("تم اعتماد الجرد أو حفظه للمزامنة");
+  }
+
+  function handleDetected(rawCode: string) {
+    const code = rawCode.trim();
+    if (!code) return;
+    const found = findByCode(products, code);
+    if (!found) {
+      toast.error("الصنف غير موجود — أضفه من شاشة الأصناف أولاً");
+      scannedRef.current = null;
+      return;
+    }
+    const isRepeat = scannedRef.current === code;
+    setScannedId(found.id);
+    scannedRef.current = code;
+    setDrafts((d) => {
+      const current = d[found.id];
+      let next: string;
+      if (isRepeat && current !== undefined && current !== "") {
+        next = String((Number(current) || 0) + 1);
+      } else if (current === undefined || current === "") {
+        next = "1";
+      } else {
+        next = current;
+      }
+      return { ...d, [found.id]: next };
+    });
+    requestAnimationFrame(() => quantityRefs.current[found.id]?.focus());
+  }
+
+  function bump(productId: string, delta: number) {
+    setDrafts((d) => {
+      const next = Math.max(0, (Number(d[productId] || 0) || 0) + delta);
+      return { ...d, [productId]: String(next) };
+    });
+  }
+
+  function clearDraft(productId: string) {
+    setDrafts((d) => {
+      const n = { ...d };
+      delete n[productId];
+      return n;
+    });
+  }
+
+  function focusRow(index: number) {
+    const target = list[index];
+    if (target) quantityRefs.current[target.id]?.focus();
+  }
+
+  function onQtyKeyDown(e: KeyboardEvent<HTMLInputElement>, index: number, productId: string) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void save(productId);
+      focusRow(index + 1);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusRow(index + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusRow(index - 1);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      clearDraft(productId);
+    }
   }
 
   if (!canField("quantity"))
@@ -167,7 +241,7 @@ function StocktakePage() {
     <AppShell title="الجرد والإدخال الأولي" roles={["storekeeper"]}>
       <div className="flex flex-wrap gap-2 mb-5">
         <Select value={warehouse} onValueChange={setWh}>
-          <SelectTrigger className="w-48 bg-card">
+          <SelectTrigger className="w-48 bg-card" aria-label="اختر المستودع">
             <SelectValue placeholder="المستودع" />
           </SelectTrigger>
           <SelectContent>
@@ -196,7 +270,18 @@ function StocktakePage() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <BarcodeScanner onDetected={setQ} />
+        <BarcodeScanner onDetected={handleDetected} />
+        <Button
+          variant="outline"
+          onClick={() => {
+            setDrafts({});
+            setScannedId(null);
+            scannedRef.current = null;
+          }}
+          disabled={!pending.length}
+        >
+          <X className="size-4" /> مسح الكميات
+        </Button>
         <Button
           onClick={approveAll}
           disabled={
@@ -214,9 +299,98 @@ function StocktakePage() {
           اعتماد الجرد ({pending.length})
         </Button>
       </div>
+
+      {scannedProduct && (
+        <div className="mb-4 rounded-xl border-2 border-primary bg-card p-4 shadow-card">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{scannedProduct.name}</div>
+              <div className="text-xs text-muted-foreground" dir="ltr">
+                {scannedProduct.barcode ?? scannedProduct.custom_barcode ?? scannedProduct.code}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                الرصيد الدفتري: {qty(scannedProduct.id, warehouse)} {scannedProduct.unit}
+              </div>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="إغلاق"
+              onClick={() => {
+                setScannedId(null);
+                scannedRef.current = null;
+              }}
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label="إنقاص"
+              onClick={() => bump(scannedProduct.id, -1)}
+            >
+              <Minus className="size-4" />
+            </Button>
+            <Input
+              ref={(el) => {
+                quantityRefs.current[scannedProduct.id] = el;
+              }}
+              type="number"
+              min="0"
+              inputMode="numeric"
+              className="h-14 flex-1 text-center text-2xl font-bold"
+              aria-label="الكمية الفعلية"
+              placeholder="الكمية"
+              value={drafts[scannedProduct.id] ?? ""}
+              onChange={(e) => setDrafts((d) => ({ ...d, [scannedProduct.id]: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void save(scannedProduct.id);
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label="زيادة"
+              onClick={() => bump(scannedProduct.id, 1)}
+            >
+              <Plus className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => save(scannedProduct.id)}
+              disabled={
+                !canAction("stocktake.adjust") ||
+                saving === scannedProduct.id ||
+                !drafts[scannedProduct.id]
+              }
+            >
+              {saving === scannedProduct.id ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}{" "}
+              حفظ
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            امسح الباركود مرة أخرى لزيادة الكمية تلقائياً. استخدم ↑ ↓ للتنقل و Enter للحفظ.
+          </p>
+        </div>
+      )}
+
       <div className="rounded-xl bg-card shadow-card divide-y">
-        {list.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 p-3">
+        {list.map((p, index) => (
+          <div
+            key={p.id}
+            className={`flex items-center gap-3 p-3 ${p.id === scannedId ? "bg-primary/5" : ""}`}
+          >
             <div className="flex-1">
               <div className="font-medium">{p.name}</div>
               <div className="text-xs text-muted-foreground">
@@ -236,15 +410,31 @@ function StocktakePage() {
                   );
                 })()}
             </div>
-            <Input
-              type="number"
-              min="0"
-              className="w-28"
-              placeholder="الكمية الفعلية"
-              value={drafts[p.id] ?? ""}
-              onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
-              onKeyDown={(e) => e.key === "Enter" && save(p.id)}
-            />
+            <div className="relative">
+              <Input
+                ref={(el) => {
+                  quantityRefs.current[p.id] = el;
+                }}
+                type="number"
+                min="0"
+                inputMode="numeric"
+                className="w-28 pl-8"
+                placeholder="الكمية الفعلية"
+                value={drafts[p.id] ?? ""}
+                onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                onKeyDown={(e) => onQtyKeyDown(e, index, p.id)}
+              />
+              {drafts[p.id] !== undefined && drafts[p.id] !== "" && (
+                <button
+                  type="button"
+                  aria-label="مسح الكمية"
+                  className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => clearDraft(p.id)}
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
             <Button
               size="icon"
               onClick={() => save(p.id)}

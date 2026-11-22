@@ -55,7 +55,11 @@ function LoginPage() {
     }
     setBusy(true);
     try {
-      const email = isEmail ? identity.toLowerCase() : mode === "in" ? loginIdentifierToEmail(identity) : usernameToEmail(identity);
+      const email = isEmail
+        ? identity.toLowerCase()
+        : mode === "in"
+          ? loginIdentifierToEmail(identity)
+          : usernameToEmail(identity);
       const { error } =
         mode === "in"
           ? await supabase.auth.signInWithPassword({ email, password })

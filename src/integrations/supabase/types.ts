@@ -687,6 +687,7 @@ export type Database = {
         Row: {
           is_primary: boolean;
           last_cost: number;
+          priority: number;
           product_id: string;
           supplier_id: string;
           supplier_sku: string | null;
@@ -695,6 +696,7 @@ export type Database = {
         Insert: {
           is_primary?: boolean;
           last_cost?: number;
+          priority?: number;
           product_id: string;
           supplier_id: string;
           supplier_sku?: string | null;
@@ -703,10 +705,38 @@ export type Database = {
         Update: {
           is_primary?: boolean;
           last_cost?: number;
+          priority?: number;
           product_id?: string;
           supplier_id?: string;
           supplier_sku?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      product_units: {
+        Row: {
+          created_at: string;
+          factor: number;
+          is_base: boolean;
+          product_id: string;
+          sort_order: number;
+          unit_name: string;
+        };
+        Insert: {
+          created_at?: string;
+          factor?: number;
+          is_base?: boolean;
+          product_id: string;
+          sort_order?: number;
+          unit_name: string;
+        };
+        Update: {
+          created_at?: string;
+          factor?: number;
+          is_base?: boolean;
+          product_id?: string;
+          sort_order?: number;
+          unit_name?: string;
         };
         Relationships: [];
       };
@@ -1377,6 +1407,30 @@ export type Database = {
           _supplier_id: string;
           _supplier_sku: string | null;
         };
+        Returns: undefined;
+      };
+      save_product_units: {
+        Args: { _product: string; _units: Json };
+        Returns: undefined;
+      };
+      save_product_units_offline: {
+        Args: { _operation_id: string; _product: string; _units: Json };
+        Returns: undefined;
+      };
+      save_product_opening_balances: {
+        Args: { _balances: Json; _product: string };
+        Returns: undefined;
+      };
+      save_product_opening_balances_offline: {
+        Args: { _balances: Json; _operation_id: string; _product: string };
+        Returns: undefined;
+      };
+      save_product_suppliers: {
+        Args: { _items: Json; _product: string };
+        Returns: undefined;
+      };
+      save_product_suppliers_offline: {
+        Args: { _items: Json; _operation_id: string; _product: string };
         Returns: undefined;
       };
       save_supplier: {

@@ -215,6 +215,7 @@ function SuppliersPage() {
         supplier_sku: supplierSku.trim() || null,
         last_cost: cost,
         is_primary: primary,
+        priority: 0,
         updated_at: new Date().toISOString(),
       };
       setProductSuppliers((items) => [
