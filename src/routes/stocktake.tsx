@@ -5,6 +5,7 @@ import { Check, Loader2, Minus, Plus, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { ProductDialog } from "@/components/ProductDialog";
 import { useInventory } from "@/hooks/use-inventory";
 import { countDiff, findByCode } from "@/lib/inventory-utils";
 import { matchesSearch } from "@/lib/arabic";
@@ -36,9 +37,10 @@ export const Route = createFileRoute("/stocktake")({
 
 function StocktakePage() {
   const { canAction, canField } = useAuth();
-  const { products, warehouses, qty } = useInventory();
+  const { products, warehouses, qty, categories, units, fields, reload } = useInventory();
   const [wh, setWh] = useState<string>("");
   const [kind, setKind] = useState<"initial" | "count">("count");
+  const [addOpen, setAddOpen] = useState(false);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
@@ -271,6 +273,11 @@ function StocktakePage() {
           />
         </div>
         <BarcodeScanner onDetected={handleDetected} />
+        {canAction("inventory.create") && (
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="size-4" /> إضافة صنف جديد
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={() => {
@@ -458,6 +465,18 @@ function StocktakePage() {
           <p className="p-8 text-center text-muted-foreground">أضف أصنافاً من شاشة المخزون أولاً</p>
         )}
       </div>
+
+      <ProductDialog
+        open={addOpen}
+        onOpenChange={(o) => {
+          setAddOpen(o);
+          if (!o) void reload();
+        }}
+        categories={categories}
+        warehouses={warehouses}
+        units={units}
+        fields={fields}
+      />
     </AppShell>
   );
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -42,37 +42,73 @@ function PurchaseOrdersPage() {
   const [productToAdd, setProductToAdd] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+  const generatedRef = useRef(false);
+
+  const loadAll = useCallback(async () => {
+    const [supplierResult, orderResult, itemResult] = await Promise.all([
+      supabase.from("suppliers").select("*").eq("active", true).order("name"),
+      supabase.from("purchase_orders").select("*").order("created_at", { ascending: false }),
+      supabase.from("purchase_order_items").select("*"),
+    ]);
+    if (supplierResult.error) toast.error(`تعذر تحميل الموردين: ${supplierResult.error.message}`);
+    else setSuppliers(supplierResult.data ?? []);
+    if (orderResult.error) toast.error(`تعذر تحميل أوامر الشراء: ${orderResult.error.message}`);
+    else setOrders(orderResult.data ?? []);
+    if (itemResult.error) toast.error(`تعذر تحميل تفاصيل الأوامر: ${itemResult.error.message}`);
+    else setOrderItems(itemResult.data ?? []);
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const [supplierResult, orderResult, itemResult] = await Promise.all([
-        supabase.from("suppliers").select("*").eq("active", true).order("name"),
-        supabase.from("purchase_orders").select("*").order("created_at", { ascending: false }),
-        supabase.from("purchase_order_items").select("*"),
-      ]);
-      if (!active) return;
-      if (supplierResult.error) toast.error(`تعذر تحميل الموردين: ${supplierResult.error.message}`);
-      else setSuppliers(supplierResult.data ?? []);
-      if (orderResult.error) toast.error(`تعذر تحميل أوامر الشراء: ${orderResult.error.message}`);
-      else setOrders(orderResult.data ?? []);
-      if (itemResult.error) toast.error(`تعذر تحميل تفاصيل الأوامر: ${itemResult.error.message}`);
-      else setOrderItems(itemResult.data ?? []);
-    };
-    void load();
+    void loadAll();
     const channel = supabase
       .channel("purchase-order-list")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "purchase_orders" },
-        () => void load(),
+        () => void loadAll(),
       )
       .subscribe();
     return () => {
-      active = false;
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadAll]);
+
+  const runGeneration = useCallback(
+    async (silent = false) => {
+      if (!canAction("purchase_orders.manage")) return;
+      setGenBusy(true);
+      try {
+        const { data, error } = await supabase.rpc("generate_purchase_orders");
+        if (error) {
+          if (!silent) toast.error(`تعذر توليد أوامر الشراء: ${error.message}`);
+          return;
+        }
+        const res = (data ?? {}) as { drafts?: number; submitted?: number };
+        const drafts = res.drafts ?? 0;
+        const submitted = res.submitted ?? 0;
+        if (drafts > 0 || submitted > 0) {
+          toast.success(`تم توليد ${drafts} طلب شراء وإرسال ${submitted} تلقائيًا للموردين`);
+          await loadAll();
+        }
+      } catch (error) {
+        if (!silent)
+          toast.error(
+            `تعذر الاتصال لتوليد أوامر الشراء: ${error instanceof Error ? error.message : String(error)}`,
+          );
+      } finally {
+        setGenBusy(false);
+      }
+    },
+    [canAction, loadAll],
+  );
+
+  // توليد تلقائي عند فتح الصفحة (مرة واحدة) — idempotent فلا يُكرّر الطلبات المفتوحة
+  useEffect(() => {
+    if (generatedRef.current || !canAction("purchase_orders.manage")) return;
+    generatedRef.current = true;
+    void runGeneration(true);
+  }, [canAction, runGeneration]);
 
   function addProduct() {
     const product = products.find((item) => item.id === productToAdd);
@@ -220,6 +256,27 @@ function PurchaseOrdersPage() {
   return (
     <AppShell title="أوامر الشراء والنواقص">
       <div className="space-y-5">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-card p-4 shadow-card">
+          <div className="flex-1">
+            <div className="font-bold">التوريد التلقائي</div>
+            <p className="text-xs text-muted-foreground">
+              توليد طلبات شراء تلقائية لكل مورد حسب الأصناف التي بلغت حد الطلب، ثم إرسالها تلقائيًا
+              أو إبقاؤها كمسودة للمراجعة حسب طريقة كل مورد.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={() => void runGeneration(false)}
+            disabled={genBusy || !canAction("purchase_orders.manage")}
+          >
+            {genBusy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}{" "}
+            توليد طلبات الشراء
+          </Button>
+        </div>
         <form onSubmit={handleSave} className="rounded-xl bg-card p-5 shadow-card space-y-4">
           <h2 className="font-bold">{draftId ? "تعديل مسودة أمر الشراء" : "إنشاء أمر شراء"}</h2>
           <div className="grid gap-3 md:grid-cols-2">

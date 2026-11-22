@@ -60,9 +60,11 @@ describe("default permissions and page mapping", () => {
       "sales",
       "customers",
       "cash",
+      "returns",
     ]);
     expect(def.actions).toContain("sales.draft");
     expect(def.actions).toContain("cash.manage");
+    expect(def.actions).toContain("returns.manage");
     expect(def.actions).not.toContain("purchases.post");
   });
   it("roles without a custom row keep their defaults", () => {
@@ -74,6 +76,7 @@ describe("default permissions and page mapping", () => {
     expect(pageForPath("/")).toBe("dashboard");
     expect(pageForPath("/inventory")).toBe("inventory");
     expect(pageForPath("/users")).toBe("users");
+    expect(pageForPath("/returns")).toBe("returns");
     expect(pageForPath("/settings/currency")).toBe("settings");
   });
 });

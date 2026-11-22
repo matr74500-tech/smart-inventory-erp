@@ -43,7 +43,7 @@ function LoginPage() {
     const identity = username.trim();
     const isEmail = identity.includes("@");
     const isValidIdentity = isEmail
-      ? /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(identity)
+      ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity)
       : /^[a-zA-Z0-9._-]{3,}$/.test(identity);
     if (!isValidIdentity) {
       toast.error(

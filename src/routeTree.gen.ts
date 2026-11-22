@@ -25,6 +25,7 @@ import { Route as Purchase_ordersRouteImport } from './routes/purchase_orders'
 import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ReordersRouteImport } from './routes/reorders'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as SalesRouteImport } from './routes/sales'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StocktakeRouteImport } from './routes/stocktake'
@@ -112,6 +113,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReturnsRoute = ReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SalesRoute = SalesRouteImport.update({
   id: '/sales',
   path: '/sales',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/reorders'
     | '/reports'
+    | '/returns'
     | '/sales'
     | '/settings'
     | '/stocktake'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/reorders'
     | '/reports'
+    | '/returns'
     | '/sales'
     | '/settings'
     | '/stocktake'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/reorders'
     | '/reports'
+    | '/returns'
     | '/sales'
     | '/settings'
     | '/stocktake'
@@ -308,6 +320,7 @@ export interface RootRouteChildren {
   PurchasesRoute: typeof PurchasesRoute
   ReordersRoute: typeof ReordersRoute
   ReportsRoute: typeof ReportsRoute
+  ReturnsRoute: typeof ReturnsRoute
   SalesRoute: typeof SalesRoute
   SettingsRoute: typeof SettingsRoute
   StocktakeRoute: typeof StocktakeRoute
@@ -430,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/returns': {
+      id: '/returns'
+      path: '/returns'
+      fullPath: '/returns'
+      preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sales': {
       id: '/sales'
       path: '/sales'
@@ -492,6 +512,7 @@ const rootRouteChildren: RootRouteChildren = {
   PurchasesRoute: PurchasesRoute,
   ReordersRoute: ReordersRoute,
   ReportsRoute: ReportsRoute,
+  ReturnsRoute: ReturnsRoute,
   SalesRoute: SalesRoute,
   SettingsRoute: SettingsRoute,
   StocktakeRoute: StocktakeRoute,

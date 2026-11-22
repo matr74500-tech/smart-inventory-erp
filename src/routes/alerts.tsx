@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, Moon, PackageX, Warehouse as WhIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Moon,
+  PackageX,
+  RotateCcw,
+  Warehouse as WhIcon,
+} from "lucide-react";
 import { ExpiryBadge } from "@/components/ExpiryBadge";
 import { expiryStatus } from "@/lib/inventory-utils";
 import { AppShell } from "@/components/AppShell";
@@ -32,6 +39,52 @@ function AlertsPage() {
   const { products, qty, stock, minimums, warehouses } = useInventory();
   const [days, setDays] = useState("60");
   const [moved, setMoved] = useState<Set<string> | null>(null);
+  const [returnsInfo, setReturnsInfo] = useState({
+    count: 0,
+    total: 0,
+    damaged: 0,
+    supplierCount: 0,
+    supplierCost: 0,
+  });
+
+  useEffect(() => {
+    let active = true;
+    const since = new Date(Date.now() - 30 * 864e5).toISOString();
+    const load = async () => {
+      const [ret, dam, sup] = await Promise.all([
+        supabase
+          .from("sales_returns")
+          .select("id, total_yer")
+          .eq("status", "posted")
+          .gte("posted_at", since)
+          .limit(500),
+        supabase
+          .from("sales_return_items")
+          .select("id")
+          .in("condition", ["damaged", "other"])
+          .limit(1000),
+        supabase
+          .from("supplier_returns")
+          .select("id, total_cost")
+          .eq("status", "posted")
+          .limit(500),
+      ]);
+      if (!active) return;
+      const rets = ret.data ?? [];
+      const sups = sup.data ?? [];
+      setReturnsInfo({
+        count: rets.length,
+        total: rets.reduce((s, r) => s + Number(r.total_yer), 0),
+        damaged: (dam.data ?? []).length,
+        supplierCount: sups.length,
+        supplierCost: sups.reduce((s, r) => s + Number(r.total_cost), 0),
+      });
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const since = new Date(Date.now() - Number(days) * 864e5).toISOString();
@@ -208,6 +261,38 @@ function AlertsPage() {
                 لا توجد أصناف بتاريخ انتهاء
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl bg-card shadow-card">
+        <div className="flex items-center gap-2 p-4 border-b font-bold text-warning">
+          <RotateCcw className="size-5" /> تنبيهات المرتجعات والمردودات
+          <span className="mr-auto rounded-full bg-muted px-2 text-sm">
+            {returnsInfo.count +
+              (returnsInfo.damaged ? 1 : 0) +
+              (returnsInfo.supplierCount ? 1 : 0)}
+          </span>
+        </div>
+        <div className="divide-y">
+          <div className="flex justify-between gap-2 p-3 text-sm">
+            <span>مرتجعات آخر 30 يومًا</span>
+            <span className="text-muted-foreground">
+              {returnsInfo.count} مرتجع · {returnsInfo.total.toLocaleString("ar")} (إجمالي القيمة)
+            </span>
+          </div>
+          <div className="flex justify-between gap-2 p-3 text-sm">
+            <span>أصناف تالفة / غير صالحة مرتجعة</span>
+            <span className={returnsInfo.damaged ? "text-destructive" : "text-muted-foreground"}>
+              {returnsInfo.damaged} صنف
+            </span>
+          </div>
+          <div className="flex justify-between gap-2 p-3 text-sm">
+            <span>مردودات للموردين (تحتاج متابعة)</span>
+            <span className={returnsInfo.supplierCount ? "text-warning" : "text-muted-foreground"}>
+              {returnsInfo.supplierCount} مردود · {returnsInfo.supplierCost.toLocaleString("ar")}{" "}
+              (تكلفة)
+            </span>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { useInventory } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ function SettingsPage() {
             <TabsTrigger value="units">الوحدات</TabsTrigger>
             <TabsTrigger value="fields">حقول إضافية</TabsTrigger>
             <TabsTrigger value="mins">حد أدنى لكل مستودع</TabsTrigger>
+            <TabsTrigger value="autoreorder">التوريد التلقائي</TabsTrigger>
             {can("admin") && <TabsTrigger value="shop">بيانات المحل</TabsTrigger>}
             {can("admin") && <TabsTrigger value="currencies">العملات وسعر الصرف</TabsTrigger>}
             {can("admin") && <TabsTrigger value="activity">متابعة العملاء</TabsTrigger>}
@@ -103,6 +105,9 @@ function SettingsPage() {
           </TabsContent>
           <TabsContent value="mins">
             <MinimumsEditor inv={inv} />
+          </TabsContent>
+          <TabsContent value="autoreorder">
+            <AutoReorderSettings />
           </TabsContent>
           <TabsContent value="shop">
             <ShopSettings
@@ -184,6 +189,80 @@ function InactiveCustomerSettings({ days }: { days: number | null }) {
         {busy ? "جارٍ الحفظ…" : "حفظ الإعداد"}
       </Button>
     </form>
+  );
+}
+
+function AutoReorderSettings() {
+  const [suppliers, setSuppliers] = useState<Tables<"suppliers">[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from("suppliers")
+      .select("*")
+      .eq("active", true)
+      .order("name")
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) toast.error(`تعذر تحميل الموردين: ${error.message}`);
+        else setSuppliers(data ?? []);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function setMethod(id: string, method: "auto" | "manual") {
+    const { error } = await supabase.rpc("set_supplier_order_method", {
+      _id: id,
+      _method: method,
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSuppliers((prev) =>
+      prev.map((supplier) => (supplier.id === id ? { ...supplier, po_method: method } : supplier)),
+    );
+    toast.success(
+      method === "auto"
+        ? "سيُرسَل أمر الشراء تلقائيًا لهذا المورد عند التوليد"
+        : "سيُحفَظ أمر الشراء كمسودة لمراجعته واعتماده يدويًا",
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      <p className="text-sm text-muted-foreground">
+        لكل مورد اختر طريقة تحويل طلب الشراء: «تلقائي» يُرسل الأمر للمورد فور توليده، و«يدوي» يُنشئه
+        كمسودة لمراجعته واعتماده قبل الإرسال.
+      </p>
+      <div className="rounded-xl bg-card shadow-card divide-y">
+        {loading && <div className="p-4 text-sm text-muted-foreground">جارٍ التحميل...</div>}
+        {suppliers.map((supplier) => (
+          <div key={supplier.id} className="flex items-center justify-between gap-3 p-4">
+            <div className="font-medium">{supplier.name}</div>
+            <Select
+              value={supplier.po_method === "auto" ? "auto" : "manual"}
+              onValueChange={(value) => void setMethod(supplier.id, value as "auto" | "manual")}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">تلقائي (إرسال)</SelectItem>
+                <SelectItem value="manual">يدوي (مسودة)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+        {!loading && !suppliers.length && (
+          <div className="p-6 text-center text-sm text-muted-foreground">لا يوجد موردون نشطون</div>
+        )}
+      </div>
+    </div>
   );
 }
 

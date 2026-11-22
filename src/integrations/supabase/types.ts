@@ -492,6 +492,168 @@ export type Database = {
           },
         ];
       };
+      sales_returns: {
+        Row: {
+          affects_drawer: boolean;
+          created_at: string;
+          created_by: string | null;
+          currency_code: string;
+          customer_id: string | null;
+          customer_name: string | null;
+          exchange_rate_to_yer: number;
+          id: string;
+          invoice_id: string | null;
+          notes: string | null;
+          number: number;
+          operation_id: string;
+          payment_method: string;
+          posted_at: string | null;
+          refund_kind: string;
+          status: string;
+          subtotal_yer: number;
+          total_yer: number;
+          warehouse_id: string;
+        };
+        Insert: {
+          affects_drawer?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          currency_code: string;
+          customer_id?: string | null;
+          customer_name?: string | null;
+          exchange_rate_to_yer: number;
+          id?: string;
+          invoice_id?: string | null;
+          notes?: string | null;
+          number?: number;
+          operation_id: string;
+          payment_method?: string;
+          posted_at?: string | null;
+          refund_kind?: string;
+          status?: string;
+          subtotal_yer?: number;
+          total_yer?: number;
+          warehouse_id: string;
+        };
+        Update: {
+          affects_drawer?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          currency_code?: string;
+          customer_id?: string | null;
+          customer_name?: string | null;
+          exchange_rate_to_yer?: number;
+          id?: string;
+          invoice_id?: string | null;
+          notes?: string | null;
+          number?: number;
+          operation_id?: string;
+          payment_method?: string;
+          posted_at?: string | null;
+          refund_kind?: string;
+          status?: string;
+          subtotal_yer?: number;
+          total_yer?: number;
+          warehouse_id?: string;
+        };
+        Relationships: [];
+      };
+      sales_return_items: {
+        Row: {
+          condition: string;
+          disposition: string;
+          id: string;
+          product_id: string;
+          quantity: number;
+          return_id: string;
+          total_yer: number;
+          unit_price_yer: number;
+        };
+        Insert: {
+          condition?: string;
+          disposition?: string;
+          id?: string;
+          product_id: string;
+          quantity: number;
+          return_id: string;
+          total_yer: number;
+          unit_price_yer: number;
+        };
+        Update: {
+          condition?: string;
+          disposition?: string;
+          id?: string;
+          product_id?: string;
+          quantity?: number;
+          return_id?: string;
+          total_yer?: number;
+          unit_price_yer?: number;
+        };
+        Relationships: [];
+      };
+      supplier_returns: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          notes: string | null;
+          number: number;
+          return_id: string | null;
+          status: string;
+          supplier_id: string;
+          total_cost: number;
+          warehouse_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          notes?: string | null;
+          number?: number;
+          return_id?: string | null;
+          status?: string;
+          supplier_id: string;
+          total_cost?: number;
+          warehouse_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          notes?: string | null;
+          number?: number;
+          return_id?: string | null;
+          status?: string;
+          supplier_id?: string;
+          total_cost?: number;
+          warehouse_id?: string;
+        };
+        Relationships: [];
+      };
+      supplier_return_items: {
+        Row: {
+          id: string;
+          product_id: string;
+          quantity: number;
+          supplier_return_id: string;
+          unit_cost: number;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          quantity: number;
+          supplier_return_id: string;
+          unit_cost: number;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          quantity?: number;
+          supplier_return_id?: string;
+          unit_cost?: number;
+        };
+        Relationships: [];
+      };
       vouchers: {
         Row: {
           affects_drawer: boolean;
@@ -881,6 +1043,7 @@ export type Database = {
           name: string;
           notes: string | null;
           phone: string;
+          po_method: string;
           updated_at: string;
         };
         Insert: {
@@ -891,6 +1054,7 @@ export type Database = {
           name: string;
           notes?: string | null;
           phone?: string;
+          po_method?: string;
           updated_at?: string;
         };
         Update: {
@@ -901,6 +1065,7 @@ export type Database = {
           name?: string;
           notes?: string | null;
           phone?: string;
+          po_method?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -1273,9 +1438,46 @@ export type Database = {
         Returns: string;
       };
       post_sale: { Args: { _id: string }; Returns: undefined };
+      post_return: {
+        Args: {
+          _currency_code: string;
+          _customer_id: string | null;
+          _customer_name: string | null;
+          _invoice_id: string | null;
+          _items: Json;
+          _notes: string | null;
+          _operation_id: string;
+          _payment_method: string | null;
+          _rate_to_yer: number;
+          _refund_kind: string;
+          _warehouse: string;
+        };
+        Returns: string;
+      };
+      post_return_offline: {
+        Args: {
+          _currency_code: string;
+          _customer_id: string | null;
+          _customer_name: string | null;
+          _invoice_id: string | null;
+          _items: Json;
+          _notes: string | null;
+          _operation_id: string;
+          _payment_method: string | null;
+          _rate_to_yer: number;
+          _refund_kind: string;
+          _warehouse: string;
+        };
+        Returns: string;
+      };
       post_voucher: { Args: { _id: string }; Returns: undefined };
+      generate_purchase_orders: { Args: Record<string, never>; Returns: Json };
       receive_reorder: { Args: { _id: string }; Returns: undefined };
       receive_purchase_order: { Args: { _id: string }; Returns: string };
+      set_supplier_order_method: {
+        Args: { _id: string; _method: string };
+        Returns: undefined;
+      };
       save_customer: {
         Args: {
           _address: string;

@@ -134,6 +134,7 @@ function SuppliersPage() {
         address: address.trim(),
         notes: supplierNotes.trim() || null,
         active: true,
+        po_method: "manual",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

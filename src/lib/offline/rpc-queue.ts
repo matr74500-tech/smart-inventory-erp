@@ -18,6 +18,7 @@ export type QueuedRpc = {
     | "save_sale_draft_offline"
     | "save_purchase_order_draft_offline"
     | "post_sale_offline"
+    | "post_return_offline"
     | "post_purchase_offline"
     | "set_stock_offline"
     | "set_stock_batch_offline"
