@@ -314,6 +314,51 @@ export type Database = {
           },
         ];
       };
+      cash_shifts: {
+        Row: {
+          closed_at: string | null;
+          closed_by: string | null;
+          counted: Json | null;
+          created_at: string;
+          difference: Json | null;
+          expected: Json | null;
+          id: string;
+          notes: string | null;
+          opened_at: string;
+          opened_by: string | null;
+          opening: Json;
+          status: string;
+        };
+        Insert: {
+          closed_at?: string | null;
+          closed_by?: string | null;
+          counted?: Json | null;
+          created_at?: string;
+          difference?: Json | null;
+          expected?: Json | null;
+          id?: string;
+          notes?: string | null;
+          opened_at?: string;
+          opened_by?: string | null;
+          opening?: Json;
+          status?: string;
+        };
+        Update: {
+          closed_at?: string | null;
+          closed_by?: string | null;
+          counted?: Json | null;
+          created_at?: string;
+          difference?: Json | null;
+          expected?: Json | null;
+          id?: string;
+          notes?: string | null;
+          opened_at?: string;
+          opened_by?: string | null;
+          opening?: Json;
+          status?: string;
+        };
+        Relationships: [];
+      };
       sales_invoices: {
         Row: {
           affects_drawer: boolean;
@@ -1320,6 +1365,14 @@ export type Database = {
           _notes: string | null;
           _operation_id: string;
         };
+        Returns: undefined;
+      };
+      open_cash_shift: {
+        Args: { _opening?: Json };
+        Returns: string;
+      };
+      close_cash_shift: {
+        Args: { _counts: Json; _id: string; _notes?: string | null };
         Returns: undefined;
       };
       save_voucher_draft_offline: {

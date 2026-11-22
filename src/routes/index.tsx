@@ -128,6 +128,26 @@ const SHORTCUTS = [
     icon: ShoppingCart,
     tone: "text-success",
   },
+  {
+    key: "6",
+    label: "الأصناف",
+    desc: "إدارة المخزون",
+    to: "/inventory",
+    search: {},
+    page: "inventory",
+    icon: Boxes,
+    tone: "text-primary",
+  },
+  {
+    key: "7",
+    label: "التوريد",
+    desc: "طلبات إعادة التوريد",
+    to: "/reorders",
+    search: {},
+    page: "reorders",
+    icon: Truck,
+    tone: "text-success",
+  },
 ] as const;
 
 function isTypingTarget(target: EventTarget | null): boolean {

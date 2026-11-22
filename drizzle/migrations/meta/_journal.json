@@ -92,6 +92,13 @@
       "when": 1794625000000,
       "tag": "0020_product_units_balances_suppliers",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794626000000,
+      "tag": "0021_cash_shifts",
+      "breakpoints": true
     }
   ]
 }
