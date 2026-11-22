@@ -19,6 +19,7 @@ import type { Category, CustomField, Product, Unit, Warehouse } from "@/hooks/us
 import { useAuth } from "@/lib/auth";
 import { PRICE_TIERS, fileToDataUrl } from "@/lib/inventory-utils";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
+import { uploadProductImage } from "@/lib/offline/product-image";
 
 const NONE = "__none";
 
@@ -56,7 +57,7 @@ function ProductForm({
   fields,
 }: Props) {
   const p = product;
-  const { canField, canAction } = useAuth();
+  const { canField, canAction, session } = useAuth();
   const visibleFields = fields.filter((fd) => canField(`attribute:${fd.name}`));
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState(p?.barcode ?? barcode ?? "");
@@ -104,7 +105,7 @@ function ProductForm({
       reorder_qty: n("reorder_qty"),
       expiry_date: String(f.get("expiry_date") || "") || null,
       supplier: String(f.get("supplier") || "") || null,
-      image_url: image,
+      image_url: image?.startsWith("data:image/") ? (p?.image_url ?? null) : image,
       attributes: attrs,
     };
     const allowedRow = Object.fromEntries(
@@ -140,8 +141,26 @@ function ProductForm({
         : {},
       _balances: initialBalances,
     };
-    const saveOffline = async () =>
-      enqueueRpc({ id: operationId, name: "save_product_offline", args: offlineArgs as never });
+    const pendingImage = image?.startsWith("data:image/") ? image : null;
+    const saveOffline = async () => {
+      await enqueueRpc({
+        id: operationId,
+        name: "save_product_offline",
+        args: offlineArgs as never,
+      });
+      if (pendingImage) {
+        const imageOperationId = crypto.randomUUID();
+        await enqueueRpc({
+          id: imageOperationId,
+          name: "upload_product_image_offline",
+          args: {
+            _operation_id: imageOperationId,
+            _product_id: productId,
+            _data_url: pendingImage,
+          },
+        });
+      }
+    };
     if (p) {
       delete allowedRow.attributes;
       const { error } = await supabase.from("products").update(allowedRow).eq("id", p.id);
@@ -155,7 +174,7 @@ function ProductForm({
           return;
         }
         setBusy(false);
-        toast.info("حُفظ تعديل الصنف على هذا الجهاز وسيُزامن عند عودة الاتصال؛ الصورة تبقى كما هي");
+        toast.info("حُفظ تعديل الصنف وصورته على هذا الجهاز وسيُزامنان عند عودة الاتصال");
         onOpenChange(false);
         return;
       }
@@ -191,7 +210,7 @@ function ProductForm({
           return;
         }
         setBusy(false);
-        toast.info("حُفظ الصنف على هذا الجهاز وسيُزامن عند عودة الاتصال؛ الصورة ستحتاج رفعًا لاحقًا");
+        toast.info("حُفظ الصنف وصورته على هذا الجهاز وسيُزامنان عند عودة الاتصال");
         onOpenChange(false);
         return;
       }
@@ -213,6 +232,47 @@ function ProductForm({
       }
       setBusy(false);
       toast.success("تمت إضافة الصنف");
+    }
+    if (pendingImage && session?.user.id) {
+      try {
+        const imageUrl = await uploadProductImage(
+          session.user.id,
+          productId,
+          operationId,
+          pendingImage,
+        );
+        const { error: imageError } = await supabase
+          .from("products")
+          .update({ image_url: imageUrl })
+          .eq("id", productId);
+        if (imageError) throw imageError;
+      } catch (imageError) {
+        if (isTransientNetworkError(imageError)) {
+          const imageOperationId = crypto.randomUUID();
+          try {
+            await enqueueRpc({
+              id: imageOperationId,
+              name: "upload_product_image_offline",
+              args: {
+                _operation_id: imageOperationId,
+                _product_id: productId,
+                _data_url: pendingImage,
+              },
+            });
+            toast.info("تم حفظ الصنف، وحُفظت صورته لمزامنتها عند عودة الاتصال");
+          } catch (queueError) {
+            toast.error(
+              queueError instanceof Error
+                ? queueError.message
+                : "حُفظ الصنف لكن تعذر حفظ الصورة محليًا",
+            );
+          }
+        } else {
+          toast.error(
+            `تم حفظ الصنف لكن تعذر رفع الصورة: ${imageError instanceof Error ? imageError.message : String(imageError)}`,
+          );
+        }
+      }
     }
     onOpenChange(false);
   }

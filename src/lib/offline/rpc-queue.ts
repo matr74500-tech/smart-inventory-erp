@@ -23,7 +23,8 @@ export type QueuedRpc = {
     | "save_supplier_offline"
     | "save_product_supplier_offline"
     | "save_product_offline"
-    | "save_catalog_setting_offline";
+    | "save_catalog_setting_offline"
+    | "upload_product_image_offline";
   args: Record<string, Json>;
   createdAt: number;
   attempts: number;
