@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Search,
@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useInventory } from "@/hooks/use-inventory";
+import { findByCode } from "@/lib/inventory-utils";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -95,6 +97,7 @@ function ReturnsPage() {
   const [supplierNames, setSupplierNames] = useState<Map<string, string>>(new Map());
 
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const scannedRef = useRef<string | null>(null);
 
   const refreshInvoices = useCallback(async () => {
     setLoadingInvoices(true);
@@ -181,6 +184,32 @@ function ReturnsPage() {
   const updateLine = (salesItemId: string, patch: Partial<ReturnLine>) => {
     setLines((prev) => prev.map((l) => (l.salesItemId === salesItemId ? { ...l, ...patch } : l)));
   };
+
+  function handleDetected(rawCode: string) {
+    const code = rawCode.trim();
+    if (!code) return;
+    if (!selected) {
+      toast.error("اختر فاتورة أولاً قبل مسح الباركود");
+      return;
+    }
+    const found = findByCode(products, code);
+    if (!found) {
+      toast.error("الصنف غير موجود");
+      return;
+    }
+    const line = lines.find((l) => l.productId === found.id);
+    if (!line) {
+      toast.error("هذا الصنف غير موجود في الفاتورة المختارة");
+      return;
+    }
+    const isRepeat = scannedRef.current === code;
+    scannedRef.current = code;
+    if (isRepeat && Number(line.returnQty) > 0) {
+      updateLine(line.salesItemId, { returnQty: String(Number(line.returnQty) + 1) });
+    } else {
+      updateLine(line.salesItemId, { returnQty: "1" });
+    }
+  }
 
   const includedLines = lines.filter((l) => Number(l.returnQty) > 0);
   const total = includedLines.reduce((sum, l) => sum + Number(l.returnQty) * l.unitPrice, 0);
@@ -298,6 +327,7 @@ function ReturnsPage() {
             {warehouses.length ? `المخازن: ${warehouses.length}` : ""}
           </span>
         </div>
+        <BarcodeScanner onDetected={handleDetected} />
 
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="rounded-xl bg-card shadow-card">
