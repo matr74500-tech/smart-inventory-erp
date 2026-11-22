@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { defaultPermissions, isPermitted } from "./permissions";
 
 describe("individual employee permissions", () => {
-  const custom = { pages: ["inventory"], actions: ["inventory.create"], fields: ["name", "barcode"] };
+  const custom = {
+    pages: ["inventory"],
+    actions: ["inventory.create"],
+    fields: ["name", "barcode"],
+  };
   it("allows only the selected pages, regardless of employee role", () => {
     expect(isPermitted(["storekeeper"], custom, "pages", "inventory")).toBe(true);
     expect(isPermitted(["storekeeper"], custom, "pages", "purchases")).toBe(false);
@@ -17,7 +21,9 @@ describe("individual employee permissions", () => {
     expect(isPermitted(["storekeeper"], custom, "fields", "quantity")).toBe(false);
   });
   it("an empty selection grants no employee access", () => {
-    expect(isPermitted(["storekeeper"], { pages: [], actions: [], fields: [] }, "pages", "inventory")).toBe(false);
+    expect(
+      isPermitted(["storekeeper"], { pages: [], actions: [], fields: [] }, "pages", "inventory"),
+    ).toBe(false);
   });
   it("keeps the manager able to administer employees", () => {
     expect(isPermitted(["admin"], custom, "pages", "users")).toBe(true);

@@ -17,7 +17,20 @@ export type ShelfStock = Tables<"shelf_stock">;
 export type Currency = Tables<"currencies">;
 export type ExchangeRate = Tables<"exchange_rates">;
 
-const LIVE_TABLES = ["products", "stock", "reorder_requests", "warehouses", "categories", "units", "custom_fields", "app_settings", "stock_minimums", "shelf_stock", "currencies", "exchange_rates"];
+const LIVE_TABLES = [
+  "products",
+  "stock",
+  "reorder_requests",
+  "warehouses",
+  "categories",
+  "units",
+  "custom_fields",
+  "app_settings",
+  "stock_minimums",
+  "shelf_stock",
+  "currencies",
+  "exchange_rates",
+];
 
 /** Loads all inventory data and keeps every screen live via realtime. */
 export function useInventory() {
@@ -51,7 +64,11 @@ export function useInventory() {
       supabase.from("stock_minimums").select("*"),
       supabase.from("shelf_stock").select("*"),
       supabase.from("currencies").select("*").order("code"),
-      supabase.from("exchange_rates").select("*").order("effective_at", { ascending: false }).order("created_at", { ascending: false }),
+      supabase
+        .from("exchange_rates")
+        .select("*")
+        .order("effective_at", { ascending: false })
+        .order("created_at", { ascending: false }),
     ]);
     const currencyError = cur.error ?? rates.error;
     if (currencyError && !currencyErrorShown.current) {
@@ -83,7 +100,8 @@ export function useInventory() {
       t = setTimeout(load, 250);
     };
     let channel = supabase.channel(`inventory-${Math.random().toString(36).slice(2)}`);
-    for (const table of LIVE_TABLES) channel = channel.on("postgres_changes", { event: "*", schema: "public", table }, debounced);
+    for (const table of LIVE_TABLES)
+      channel = channel.on("postgres_changes", { event: "*", schema: "public", table }, debounced);
     channel.subscribe();
     return () => {
       clearTimeout(t);
@@ -102,7 +120,27 @@ export function useInventory() {
       warehouseId ? (m.get(`${productId}:${warehouseId}`) ?? 0) : (tot.get(productId) ?? 0);
   }, [stock]);
 
-  const categoryName = useCallback((id: string | null) => categories.find((c) => c.id === id)?.name ?? "", [categories]);
+  const categoryName = useCallback(
+    (id: string | null) => categories.find((c) => c.id === id)?.name ?? "",
+    [categories],
+  );
 
-  return { products, warehouses, stock, reorders, categories, units, fields, settings, minimums, shelfStock, currencies, exchangeRates, loading, qty, categoryName, reload: load };
+  return {
+    products,
+    warehouses,
+    stock,
+    reorders,
+    categories,
+    units,
+    fields,
+    settings,
+    minimums,
+    shelfStock,
+    currencies,
+    exchangeRates,
+    loading,
+    qty,
+    categoryName,
+    reload: load,
+  };
 }

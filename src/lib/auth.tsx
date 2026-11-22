@@ -53,7 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     Promise.all([
       supabase.from("profiles").select("username").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.from("employee_permissions").select("pages,actions,fields").eq("user_id", uid).maybeSingle(),
+      supabase
+        .from("employee_permissions")
+        .select("pages,actions,fields")
+        .eq("user_id", uid)
+        .maybeSingle(),
     ]).then(([p, r, cfg]) => {
       setUsername(p.data?.username ?? null);
       setRoles((r.data ?? []).map((x) => x.role as Role));
@@ -69,7 +73,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ session, loading, username, roles, can, canPage, canAction, canField, signOut: async () => void (await supabase.auth.signOut()) }}
+      value={{
+        session,
+        loading,
+        username,
+        roles,
+        can,
+        canPage,
+        canAction,
+        canField,
+        signOut: async () => void (await supabase.auth.signOut()),
+      }}
     >
       {children}
     </Ctx.Provider>

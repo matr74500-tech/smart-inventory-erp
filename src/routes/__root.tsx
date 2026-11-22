@@ -69,9 +69,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "سهيل سوفت | نقاط البيع وإدارة المخزون" },
-      { name: "description", content: "SuhailSoft POS & ERP لإدارة المخزون والجرد والتوريد." },
-      { name: "author", content: "SuhailSoft" },
+      { title: "نظام المخزون الذكي | نقاط البيع وإدارة المخزون" },
+      { name: "description", content: "نظام نقاط البيع وإدارة المخزون والجرد والتوريد." },
+      { name: "author", content: "نظام المخزون الذكي" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "theme-color", content: "#1f4f55" },

@@ -15,7 +15,7 @@ jobs:
           distribution: 'temurin'
       - run: bun install
       - run: bun run build
-      - run: ls -la .output/public || echo "no public"
+      - run: ls -la .vercel/output/static
       - run: bun add -D @capacitor/cli @capacitor/core @capacitor/android
       - run: |
           rm -rf android

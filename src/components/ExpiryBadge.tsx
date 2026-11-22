@@ -9,5 +9,11 @@ const STYLE = {
 export function ExpiryBadge({ date }: { date: string | null }) {
   const s = expiryStatus(date);
   if (s === "none") return null;
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STYLE[s].cls}`}>{STYLE[s].label} · <span dir="ltr">{date}</span></span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STYLE[s].cls}`}
+    >
+      {STYLE[s].label} · <span dir="ltr">{date}</span>
+    </span>
+  );
 }

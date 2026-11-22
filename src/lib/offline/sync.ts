@@ -47,7 +47,10 @@ export async function smartSave<T extends TableName>(table: T, data: TablesInser
       return { saved: "failed" as const, error: error.message };
     } catch (error) {
       addToQueue(table, data);
-      return { saved: "offline" as const, error: error instanceof Error ? error.message : String(error) };
+      return {
+        saved: "offline" as const,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   } else {
     addToQueue(table, data);

@@ -30,10 +30,10 @@ jobs:
       - name: Build Web Assets
         run: bun run build
 
-      - name: Check dist exists
+      - name: Check built web assets
         run: |
-          ls -la dist
-          test -f dist/index.html || (echo "dist/index.html not found!" && exit 1)
+          ls -la .vercel/output/static
+          test -f .vercel/output/static/index.html || (echo "built index.html not found!" && exit 1)
 
       - name: Ensure Capacitor Packages
         run: bun add -D @capacitor/cli @capacitor/core @capacitor/android

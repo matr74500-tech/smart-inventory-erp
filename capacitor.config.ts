@@ -1,13 +1,9 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'com.example.smartinventory',
-  appName: 'Smart Inventory ERP',
-  webDir: '.output/public',
-  server: {
-    url: 'https://smart-inventory-erp.vercel.app',
-    cleartext: true
-  }
+  appId: "com.smartinventory.erp",
+  appName: "Smart Inventory ERP",
+  webDir: ".vercel/output/static",
 };
 
 export default config;

@@ -17,7 +17,9 @@ export function useOfflineSync() {
       update();
       const res = await syncPending();
       if ("errors" in res && res.errors.length > 0) {
-        toast.error(`تمت مزامنة ${res.synced} من البيانات المعلقة؛ بقي ${res.remaining}. ${res.errors[0]}`);
+        toast.error(
+          `تمت مزامنة ${res.synced} من البيانات المعلقة؛ بقي ${res.remaining}. ${res.errors[0]}`,
+        );
       }
       setPendingCount(getQueue().length);
     };
