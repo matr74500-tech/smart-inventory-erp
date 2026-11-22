@@ -42,10 +42,9 @@ function LoginPage() {
     e.preventDefault();
     const identity = username.trim();
     const isEmail = identity.includes("@");
-    const isValidIdentity =
-      mode === "in" && isEmail
-        ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity)
-        : /^[a-zA-Z0-9._-]{3,}$/.test(identity);
+    const isValidIdentity = isEmail
+      ? /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(identity)
+      : /^[a-zA-Z0-9._-]{3,}$/.test(identity);
     if (!isValidIdentity) {
       toast.error(
         mode === "in"
@@ -56,7 +55,7 @@ function LoginPage() {
     }
     setBusy(true);
     try {
-      const email = mode === "in" ? loginIdentifierToEmail(identity) : usernameToEmail(identity);
+      const email = isEmail ? identity.toLowerCase() : mode === "in" ? loginIdentifierToEmail(identity) : usernameToEmail(identity);
       const { error } =
         mode === "in"
           ? await supabase.auth.signInWithPassword({ email, password })
