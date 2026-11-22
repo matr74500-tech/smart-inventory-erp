@@ -36,7 +36,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { enqueueRpc } from "@/lib/offline/rpc-queue";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 
 export const Route = createFileRoute("/customers")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -244,8 +244,11 @@ function CustomersPage() {
       toast.error("سقف المديونية يجب أن يكون رقماً موجباً أو صفراً");
       return;
     }
-    const { data: customerId, error } = await supabase.rpc("save_customer", {
-      _id: null,
+    const operationId = crypto.randomUUID();
+    const customerId = crypto.randomUUID();
+    const args = {
+      _operation_id: operationId,
+      _id: customerId,
       _name: name.trim(),
       _phone: phone.trim(),
       _secondary_phone: secPhone.trim() || null,
@@ -253,15 +256,63 @@ function CustomersPage() {
       _customer_type: type,
       _credit_limit_yer: creditLimit,
       _inactive_alert_enabled: true,
-    });
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+      setCustomers((items) => [
+        {
+          id: customerId,
+          name: name.trim(),
+          phone: phone.trim(),
+          secondary_phone: secPhone.trim() || undefined,
+          address: address.trim(),
+          customer_type: type,
+          credit_limit: creditLimit,
+          balance: 0,
+          created_at: new Date().toISOString(),
+        },
+        ...items,
+      ]);
+      toast.success("تم حفظ العميل على الجهاز وسيُزامن عند عودة الاتصال");
+      setName("");
+      setPhone("");
+      setSecPhone("");
+      setAddress("");
+      setOpenAdd(false);
+      return;
+    }
+    let customerResult: { data: string | null; error: { message: string } | null };
+    try {
+      customerResult = await supabase.rpc("save_customer_offline", args);
+    } catch (networkError) {
+      if (!isTransientNetworkError(networkError)) {
+        toast.error(networkError instanceof Error ? networkError.message : "تعذر حفظ العميل");
+        return;
+      }
+      await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+      toast.success("انقطع الاتصال؛ حُفظ العميل محليًا للمزامنة");
+      setName("");
+      setPhone("");
+      setSecPhone("");
+      setAddress("");
+      setOpenAdd(false);
+      return;
+    }
+    const { data: savedCustomerId, error } = customerResult;
     if (error) {
+      if (isTransientNetworkError(error)) {
+        await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+        toast.success("تعذر الاتصال؛ حُفظ العميل محليًا للمزامنة");
+        setOpenAdd(false);
+        return;
+      }
       toast.error(`تعذر حفظ العميل: ${error.message}`);
       return;
     }
     const { data, error: loadError } = await supabase
       .from("customers")
       .select("*")
-      .eq("id", customerId)
+      .eq("id", savedCustomerId)
       .single();
     if (loadError) {
       toast.error(`تم حفظ العميل لكن تعذر تحديث القائمة: ${loadError.message}`);
@@ -302,8 +353,11 @@ function CustomersPage() {
       toast.error("لا يوجد سعر صرف صالح لهذه العملة");
       return;
     }
-    const { data: voucherId, error } = await supabase.rpc("save_voucher_draft", {
-      _id: null,
+    const voucherIdStable = crypto.randomUUID();
+    const saveOperationId = crypto.randomUUID();
+    const args = {
+      _operation_id: saveOperationId,
+      _id: voucherIdStable,
       _kind: vType,
       _customer_id: vCustId || null,
       _payee: cust?.name ?? (vPayee.trim() || null),
@@ -314,14 +368,56 @@ function CustomersPage() {
       _payment_method: vMethod,
       _affects_drawer: vMethod.includes("نقدي") || vMethod.startsWith("سعودي"),
       _notes: vNotes.trim() || null,
-    });
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: saveOperationId, name: "save_voucher_draft_offline", args });
+      if (post) {
+        const postOperationId = crypto.randomUUID();
+        await enqueueRpc({
+          id: postOperationId,
+          name: "post_voucher_offline",
+          args: { _operation_id: postOperationId, _id: voucherIdStable },
+        });
+      }
+      toast.success("تم حفظ السند محليًا للمزامنة عند عودة الاتصال");
+      setVAmount("");
+      setVNotes("");
+      setVPayee("");
+      setVCustId("");
+      setOpenVoucher(false);
+      return;
+    }
+    const { data: voucherId, error } = await supabase.rpc("save_voucher_draft_offline", args);
     if (error) {
+      if (/network|fetch|offline|failed/i.test(error.message)) {
+        await enqueueRpc({ id: saveOperationId, name: "save_voucher_draft_offline", args });
+        if (post) {
+          const postOperationId = crypto.randomUUID();
+          await enqueueRpc({
+            id: postOperationId,
+            name: "post_voucher_offline",
+            args: { _operation_id: postOperationId, _id: voucherIdStable },
+          });
+        }
+        toast.success("تعذر الاتصال؛ حُفظ السند محليًا للمزامنة");
+        setVAmount("");
+        setOpenVoucher(false);
+        return;
+      }
       toast.error(`تعذر حفظ السند: ${error.message}`);
       return;
     }
     if (post) {
-      const { error: postError } = await supabase.rpc("post_voucher", { _id: voucherId });
+      const postOperationId = crypto.randomUUID();
+      const postArgs = { _operation_id: postOperationId, _id: voucherId };
+      const { error: postError } = await supabase.rpc("post_voucher_offline", postArgs);
       if (postError) {
+        if (/network|fetch|offline|failed/i.test(postError.message)) {
+          await enqueueRpc({ id: postOperationId, name: "post_voucher_offline", args: postArgs });
+          toast.success("تم حفظ السند؛ سيُرحّل تلقائيًا عند عودة الاتصال");
+          setOpenVoucher(false);
+          return;
+        }
         toast.error(`حُفظ السند كمسودة، لكن تعذر ترحيله: ${postError.message}`);
         return;
       }

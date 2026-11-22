@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { findByCode, PRICE_TIERS, type PriceKey } from "@/lib/inventory-utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { enqueueRpc } from "@/lib/offline/rpc-queue";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -249,6 +249,12 @@ function SalesPage() {
       void refreshDrafts();
       return data;
     } catch (error) {
+      if (isTransientNetworkError(error)) {
+        await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+        setDraftId(operationId);
+        toast.success("انقطع الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
+        return operationId;
+      }
       toast.error(
         `تعذر الاتصال لحفظ المسودة: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -261,19 +267,21 @@ function SalesPage() {
       toast.error("ليس لديك صلاحية ترحيل فاتورة البيع");
       return;
     }
+    const operationId = crypto.randomUUID();
+    const args = { _operation_id: operationId, _id: id };
     try {
-      const operationId = crypto.randomUUID();
       if (!navigator.onLine) {
-        await enqueueRpc({
-          id: operationId,
-          name: "post_sale_offline",
-          args: { _operation_id: operationId, _id: id },
-        });
+        await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
         toast.success("تم حفظ طلب ترحيل الفاتورة محليًا للمزامنة");
         return;
       }
-      const { error } = await supabase.rpc("post_sale", { _id: id });
+      const { error } = await supabase.rpc("post_sale_offline", args);
       if (error) {
+        if (/network|fetch|offline|failed/i.test(error.message)) {
+          await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
+          toast.success("تعذر الاتصال؛ حُفظ طلب الترحيل للمزامنة");
+          return;
+        }
         toast.error(`تعذر ترحيل الفاتورة؛ حُفظت كمسودة: ${error.message}`);
         return;
       }
@@ -285,6 +293,11 @@ function SalesPage() {
       setTax("0");
       reload();
     } catch (error) {
+      if (isTransientNetworkError(error)) {
+        await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
+        toast.success("انقطع الاتصال؛ حُفظ طلب الترحيل للمزامنة");
+        return;
+      }
       toast.error(
         `تعذر الاتصال لترحيل الفاتورة؛ بقيت مسودة: ${error instanceof Error ? error.message : String(error)}`,
       );

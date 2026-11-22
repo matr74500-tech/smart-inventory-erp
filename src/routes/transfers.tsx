@@ -8,7 +8,7 @@ import { useInventory } from "@/hooks/use-inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { enqueueRpc } from "@/lib/offline/rpc-queue";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -85,15 +85,27 @@ function TransfersPage() {
         setAmount("");
         return;
       }
-      const { error } = await supabase.rpc("transfer_shelf_stock", {
-        _product: product,
-        _from_wh: from,
-        _from_shelf: fromShelf.trim(),
-        _to_wh: to,
-        _to_shelf: toShelf.trim(),
-        _qty: Number(amount),
-      });
-      if (error) throw error;
+      let error: { message: string } | null = null;
+      try {
+        ({ error } = await supabase.rpc("transfer_shelf_stock_offline", args));
+      } catch (networkError) {
+        if (isTransientNetworkError(networkError)) {
+          await enqueueRpc({ id: operationId, name: "transfer_shelf_stock_offline", args });
+          toast.success("انقطع الاتصال؛ حُفظ التحويل محليًا للمزامنة");
+          setAmount("");
+          return;
+        }
+        throw networkError;
+      }
+      if (error) {
+        if (/network|fetch|offline|failed/i.test(error.message)) {
+          await enqueueRpc({ id: operationId, name: "transfer_shelf_stock_offline", args });
+          toast.success("تعذر الاتصال؛ حُفظ التحويل محليًا للمزامنة");
+          setAmount("");
+          return;
+        }
+        throw error;
+      }
       toast.success("تم تحويل الكمية بين الرفوف");
       setAmount("");
     } catch (error) {

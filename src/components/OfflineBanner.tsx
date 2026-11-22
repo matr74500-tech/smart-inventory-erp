@@ -1,12 +1,12 @@
 import { useOfflineSync } from "@/lib/offline/useOfflineSync";
 
 export function OfflineBanner() {
-  const { online, pendingCount } = useOfflineSync();
-  if (online && pendingCount === 0) return null;
+  const { online, pendingCount, syncError } = useOfflineSync();
+  if (online && pendingCount === 0 && !syncError) return null;
   return (
     <div
       style={{
-        background: online ? "#f59e0b" : "#ef4444",
+        background: online && !syncError ? "#f59e0b" : "#b91c1c",
         color: "white",
         textAlign: "center",
         padding: "6px",
@@ -17,9 +17,10 @@ export function OfflineBanner() {
       }}
     >
       {!online
-        ? "أنت الآن بدون اتصال - ستتوقف العمليات التي تحتاج الخادم حتى يعود الاتصال"
-        : `تمت المزامنة - بقي ${pendingCount} عنصر معلق`}
-      {pendingCount > 0 ? ` | معلق: ${pendingCount}` : ""}
+        ? `أنت الآن دون اتصال؛ العمليات المحفوظة محليًا: ${pendingCount}`
+        : syncError
+          ? `تعذرت مزامنة بعض العمليات؛ ما زالت محفوظة على هذا الجهاز (${pendingCount}). ${syncError}`
+          : `توجد ${pendingCount} عملية بانتظار المزامنة`}
     </div>
   );
 }

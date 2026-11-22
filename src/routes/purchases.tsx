@@ -10,7 +10,7 @@ import { matchesSearch } from "@/lib/arabic";
 import { findByCode, num, readSheet, str, toBaseQty } from "@/lib/inventory-utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { enqueueRpc } from "@/lib/offline/rpc-queue";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -161,13 +161,27 @@ function PurchasesPage() {
       toast.success("تم حفظ فاتورة الشراء محليًا للمزامنة");
       return;
     }
-    const { error } = await supabase.rpc("post_purchase", {
-      _supplier: supplier || "",
-      _warehouse: warehouse,
-      _items: items,
-    });
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await supabase.rpc("post_purchase_offline", args));
+    } catch (networkError) {
+      if (isTransientNetworkError(networkError)) {
+        await enqueueRpc({ id: operationId, name: "post_purchase_offline", args });
+        setBusy(false);
+        toast.success("انقطع الاتصال؛ حُفظت فاتورة الشراء محليًا للمزامنة");
+        return;
+      }
+      setBusy(false);
+      toast.error(networkError instanceof Error ? networkError.message : "تعذر ترحيل المشتريات");
+      return;
+    }
     setBusy(false);
     if (error) {
+      if (isTransientNetworkError(error)) {
+        await enqueueRpc({ id: operationId, name: "post_purchase_offline", args });
+        toast.success("تعذر الاتصال؛ حُفظت فاتورة الشراء محليًا للمزامنة");
+        return;
+      }
       toast.error(error.message);
       return;
     }

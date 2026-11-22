@@ -11,7 +11,7 @@ import { matchesSearch } from "@/lib/arabic";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { enqueueRpc } from "@/lib/offline/rpc-queue";
+import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import {
   Select,
   SelectContent,
@@ -72,14 +72,37 @@ function StocktakePage() {
       toast.success("تم حفظ تسوية الجرد محليًا للمزامنة");
       return;
     }
-    const { error } = await supabase.rpc("set_stock", {
-      _product: productId,
-      _warehouse: warehouse,
-      _qty: Number(v),
-      _kind: kind,
-    });
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await supabase.rpc("set_stock_offline", args));
+    } catch (networkError) {
+      if (isTransientNetworkError(networkError)) {
+        await enqueueRpc({ id: operationId, name: "set_stock_offline", args });
+        setSaving(null);
+        setDrafts((d) => {
+          const n = { ...d };
+          delete n[productId];
+          return n;
+        });
+        toast.success("انقطع الاتصال؛ حُفظت تسوية الجرد محليًا");
+        return;
+      }
+      setSaving(null);
+      toast.error(networkError instanceof Error ? networkError.message : "تعذر حفظ الجرد");
+      return;
+    }
     setSaving(null);
     if (error) {
+      if (/network|fetch|offline|failed/i.test(error.message)) {
+        await enqueueRpc({ id: operationId, name: "set_stock_offline", args });
+        setDrafts((d) => {
+          const n = { ...d };
+          delete n[productId];
+          return n;
+        });
+        toast.success("تعذر الاتصال؛ حُفظت تسوية الجرد محليًا");
+        return;
+      }
       toast.error(error.message);
       return;
     }
@@ -96,22 +119,41 @@ function StocktakePage() {
     if (!canAction("stocktake.adjust")) return;
     if (!pending.length || !confirm(`اعتماد الجرد وتسوية ${pending.length} صنف؟`)) return;
     setSaving("all");
-    for (const [pid, v] of pending) {
-      const { error } = await supabase.rpc("set_stock", {
-        _product: pid,
-        _warehouse: warehouse,
-        _qty: Number(v),
-        _kind: kind,
-      });
+    const operationId = crypto.randomUUID();
+    const args = {
+      _operation_id: operationId,
+      _warehouse: warehouse,
+      _kind: kind,
+      _items: pending.map(([product_id, quantity]) => ({ product_id, quantity: Number(quantity) })),
+    };
+    if (!navigator.onLine) {
+      await enqueueRpc({ id: operationId, name: "set_stock_batch_offline", args });
+    } else {
+      let error: { message: string } | null = null;
+      try {
+        ({ error } = await supabase.rpc("set_stock_batch_offline", args));
+      } catch (networkError) {
+        if (isTransientNetworkError(networkError)) {
+          await enqueueRpc({ id: operationId, name: "set_stock_batch_offline", args });
+        } else {
+          toast.error(networkError instanceof Error ? networkError.message : "تعذر اعتماد الجرد");
+          setSaving(null);
+          return;
+        }
+      }
       if (error) {
-        toast.error(error.message);
-        setSaving(null);
-        return;
+        if (/network|fetch|offline|failed/i.test(error.message)) {
+          await enqueueRpc({ id: operationId, name: "set_stock_batch_offline", args });
+        } else {
+          toast.error(error.message);
+          setSaving(null);
+          return;
+        }
       }
     }
     setSaving(null);
     setDrafts({});
-    toast.success("تم اعتماد الجرد وتسوية الأرصدة");
+    toast.success("تم اعتماد الجرد أو حفظه للمزامنة");
   }
 
   if (!canField("quantity"))

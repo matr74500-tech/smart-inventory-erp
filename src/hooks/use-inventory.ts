@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { getInventorySnapshot, saveInventorySnapshot } from "@/lib/offline/inventory-cache";
 
 export type Product = Tables<"products">;
 export type Warehouse = Tables<"warehouses">;
@@ -52,24 +53,60 @@ export function useInventory() {
 
   const load = useCallback(async () => {
     if (!session || authLoading) return;
-    const [p, w, s, r, c, u, f, st, mn, sh, cur, rates] = await Promise.all([
-      supabase.rpc("visible_products"),
-      supabase.from("warehouses").select("*").order("created_at"),
-      supabase.from("stock").select("*"),
-      supabase.from("reorder_requests").select("*").order("created_at", { ascending: false }),
-      supabase.from("categories").select("*").order("name"),
-      supabase.from("units").select("*").order("created_at"),
-      supabase.from("custom_fields").select("*").order("created_at"),
-      supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
-      supabase.from("stock_minimums").select("*"),
-      supabase.from("shelf_stock").select("*"),
-      supabase.from("currencies").select("*").order("code"),
-      supabase
-        .from("exchange_rates")
-        .select("*")
-        .order("effective_at", { ascending: false })
-        .order("created_at", { ascending: false }),
-    ]);
+    const restoreSnapshot = async () => {
+      const snapshot = await getInventorySnapshot(session.user.id);
+      if (!snapshot) return false;
+      setProducts(snapshot.products);
+      setWarehouses(snapshot.warehouses);
+      setStock(snapshot.stock);
+      setReorders(snapshot.reorders);
+      setCategories(snapshot.categories);
+      setUnits(snapshot.units);
+      setFields(snapshot.fields);
+      setSettings(snapshot.settings);
+      setMinimums(snapshot.minimums);
+      setShelfStock(snapshot.shelfStock);
+      setCurrencies(snapshot.currencies);
+      setExchangeRates(snapshot.exchangeRates);
+      setLoading(false);
+      return true;
+    };
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await restoreSnapshot();
+      setLoading(false);
+      return;
+    }
+    const loadRemote = async () =>
+      Promise.all([
+        supabase.rpc("visible_products"),
+        supabase.from("warehouses").select("*").order("created_at"),
+        supabase.from("stock").select("*"),
+        supabase.from("reorder_requests").select("*").order("created_at", { ascending: false }),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("units").select("*").order("created_at"),
+        supabase.from("custom_fields").select("*").order("created_at"),
+        supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+        supabase.from("stock_minimums").select("*"),
+        supabase.from("shelf_stock").select("*"),
+        supabase.from("currencies").select("*").order("code"),
+        supabase
+          .from("exchange_rates")
+          .select("*")
+          .order("effective_at", { ascending: false })
+          .order("created_at", { ascending: false }),
+      ]);
+    let queryResults: Awaited<ReturnType<typeof loadRemote>>;
+    try {
+      queryResults = await loadRemote();
+    } catch {
+      if (!(await restoreSnapshot())) setLoading(false);
+      return;
+    }
+    const [p, w, s, r, c, u, f, st, mn, sh, cur, rates] = queryResults;
+    const queryFailed = [p, w, s, r, c, u, f, st, mn, sh, cur, rates].some(
+      (result) => result.error,
+    );
+    if (queryFailed && (await restoreSnapshot())) return;
     const currencyError = cur.error ?? rates.error;
     if (currencyError && !currencyErrorShown.current) {
       toast.error(`تعذر تحميل العملات وأسعار الصرف: ${currencyError.message}`);
@@ -89,8 +126,25 @@ export function useInventory() {
     setShelfStock(sh.data ?? []);
     setCurrencies(cur.data ?? []);
     setExchangeRates(rates.data ?? []);
+    if (!queryFailed) {
+      await saveInventorySnapshot(session.user.id, {
+        products: (p.data ?? []) as unknown as Product[],
+        warehouses: w.data ?? [],
+        stock: s.data ?? [],
+        reorders: r.data ?? [],
+        categories: c.data ?? [],
+        units: u.data ?? [],
+        fields: f.data ?? [],
+        settings: st.data ?? null,
+        minimums: mn.data ?? [],
+        shelfStock: sh.data ?? [],
+        currencies: cur.data ?? [],
+        exchangeRates: rates.data ?? [],
+        savedAt: Date.now(),
+      });
+    }
     setLoading(false);
-  }, [session?.user.id, authLoading]);
+  }, [session, authLoading]);
 
   useEffect(() => {
     load();

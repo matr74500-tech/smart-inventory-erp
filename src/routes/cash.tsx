@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/hooks/use-inventory";
 import type { Tables } from "@/integrations/supabase/types";
+import { enqueueRpc } from "@/lib/offline/rpc-queue";
 
 export const Route = createFileRoute("/cash")({
   head: () => ({ meta: [{ title: "الصندوق والإقفال اليومي | نظام المخزون الذكي" }] }),
@@ -158,12 +159,25 @@ function CashPage() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("close_daily_cash", {
+      const operationId = crypto.randomUUID();
+      const args = {
+        _operation_id: operationId,
         _business_date: businessDate,
         _counts: counts,
         _notes: notes.trim() || null,
-      });
+      };
+      if (!navigator.onLine) {
+        await enqueueRpc({ id: operationId, name: "close_daily_cash_offline", args });
+        toast.success("تم حفظ الإقفال محليًا للمزامنة عند عودة الاتصال");
+        return;
+      }
+      const { error } = await supabase.rpc("close_daily_cash_offline", args);
       if (error) {
+        if (/network|fetch|offline|failed/i.test(error.message)) {
+          await enqueueRpc({ id: operationId, name: "close_daily_cash_offline", args });
+          toast.success("تعذر الاتصال؛ حُفظ الإقفال محليًا للمزامنة");
+          return;
+        }
         toast.error(`تعذر إقفال الصندوق: ${error.message}`);
         return;
       }

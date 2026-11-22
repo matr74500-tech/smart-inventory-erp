@@ -1276,6 +1276,51 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_stock_batch_offline: {
+        Args: { _items: Json; _kind: string; _operation_id: string; _warehouse: string };
+        Returns: undefined;
+      };
+      close_daily_cash_offline: {
+        Args: {
+          _business_date: string;
+          _counts: Json;
+          _notes: string | null;
+          _operation_id: string;
+        };
+        Returns: undefined;
+      };
+      save_voucher_draft_offline: {
+        Args: {
+          _affects_drawer: boolean;
+          _amount: number;
+          _category: string;
+          _currency_code: string;
+          _customer_id: string | null;
+          _id: string;
+          _kind: string;
+          _notes: string | null;
+          _operation_id: string;
+          _payee: string | null;
+          _payment_method: string;
+          _rate_to_yer: number;
+        };
+        Returns: string;
+      };
+      post_voucher_offline: { Args: { _id: string; _operation_id: string }; Returns: undefined };
+      save_customer_offline: {
+        Args: {
+          _address: string;
+          _credit_limit_yer: number;
+          _customer_type: string;
+          _id: string;
+          _inactive_alert_enabled: boolean;
+          _name: string;
+          _operation_id: string;
+          _phone: string;
+          _secondary_phone: string | null;
+        };
+        Returns: string;
+      };
       refresh_payment_plan_statuses: { Args: never; Returns: undefined };
       update_payment_plan_status: {
         Args: { _id: string; _status: string };

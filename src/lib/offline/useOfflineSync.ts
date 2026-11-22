@@ -8,6 +8,7 @@ import { toast } from "sonner";
 export function useOfflineSync() {
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [syncError, setSyncError] = useState("");
 
   useEffect(() => {
     const update = async () => {
@@ -25,6 +26,7 @@ export function useOfflineSync() {
         );
       }
       if (rpcRes.errors.length > 0) toast.error(`تعذرت مزامنة بعض العمليات: ${rpcRes.errors[0]}`);
+      setSyncError(rpcRes.errors[0] ?? ("errors" in res ? (res.errors[0] ?? "") : ""));
       setPendingCount(getQueue().length + rpcRes.remaining);
     };
     window.addEventListener("offline", update);
@@ -38,6 +40,7 @@ export function useOfflineSync() {
           toast.error(`تعذرت مزامنة بعض البيانات المعلقة: ${res.errors[0]}`);
         }
         if (rpcRes.errors.length > 0) toast.error(`تعذرت مزامنة بعض العمليات: ${rpcRes.errors[0]}`);
+        setSyncError(rpcRes.errors[0] ?? ("errors" in res ? (res.errors[0] ?? "") : ""));
         setPendingCount(getQueue().length + rpcRes.remaining);
       }
     }, 10000);
@@ -48,5 +51,5 @@ export function useOfflineSync() {
     };
   }, []);
 
-  return { online, pendingCount };
+  return { online, pendingCount, syncError };
 }
