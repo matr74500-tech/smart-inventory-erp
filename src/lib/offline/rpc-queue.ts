@@ -34,7 +34,8 @@ export type QueuedRpc = {
     | "save_product_opening_balances_offline"
     | "save_product_suppliers_offline"
     | "save_catalog_setting_offline"
-    | "upload_product_image_offline";
+    | "upload_product_image_offline"
+    | "record_general_expense_offline";
   args: Record<string, Json>;
   createdAt: number;
   attempts: number;

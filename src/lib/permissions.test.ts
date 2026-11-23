@@ -61,10 +61,12 @@ describe("default permissions and page mapping", () => {
       "customers",
       "cash",
       "returns",
+      "expenses",
     ]);
     expect(def.actions).toContain("sales.draft");
     expect(def.actions).toContain("cash.manage");
     expect(def.actions).toContain("returns.manage");
+    expect(def.actions).toContain("expenses.manage");
     expect(def.actions).not.toContain("purchases.post");
   });
   it("roles without a custom row keep their defaults", () => {

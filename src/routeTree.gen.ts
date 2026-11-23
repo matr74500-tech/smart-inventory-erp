@@ -10,12 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as Activity_logRouteImport } from './routes/activity_log'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as BackupRouteImport } from './routes/backup'
 import { Route as CashRouteImport } from './routes/cash'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as CleanupRouteImport } from './routes/cleanup'
 import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LoginRouteImport } from './routes/login'
@@ -27,6 +29,7 @@ import { Route as ReordersRouteImport } from './routes/reorders'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as SalesRouteImport } from './routes/sales'
+import { Route as Sales_repsRouteImport } from './routes/sales_reps'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StocktakeRouteImport } from './routes/stocktake'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
@@ -36,6 +39,11 @@ import { Route as UsersRouteImport } from './routes/users'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Activity_logRoute = Activity_logRouteImport.update({
+  id: '/activity_log',
+  path: '/activity_log',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AlertsRoute = AlertsRouteImport.update({
@@ -66,6 +74,11 @@ const CleanupRoute = CleanupRouteImport.update({
 const CustomersRoute = CustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpensesRoute = ExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -123,6 +136,11 @@ const SalesRoute = SalesRouteImport.update({
   path: '/sales',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Sales_repsRoute = Sales_repsRouteImport.update({
+  id: '/sales_reps',
+  path: '/sales_reps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -151,12 +169,14 @@ const UsersRoute = UsersRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
+  '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -168,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
+  '/sales_reps': typeof Sales_repsRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
@@ -176,12 +197,14 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
+  '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -193,6 +216,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
+  '/sales_reps': typeof Sales_repsRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
@@ -202,12 +226,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
+  '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -219,6 +245,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
+  '/sales_reps': typeof Sales_repsRoute
   '/settings': typeof SettingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
@@ -229,12 +256,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity_log'
     | '/alerts'
     | '/backup'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
+    | '/expenses'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -246,6 +275,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/returns'
     | '/sales'
+    | '/sales_reps'
     | '/settings'
     | '/stocktake'
     | '/suppliers'
@@ -254,12 +284,14 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity_log'
     | '/alerts'
     | '/backup'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
+    | '/expenses'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -271,6 +303,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/returns'
     | '/sales'
+    | '/sales_reps'
     | '/settings'
     | '/stocktake'
     | '/suppliers'
@@ -279,12 +312,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity_log'
     | '/alerts'
     | '/backup'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
+    | '/expenses'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -296,6 +331,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/returns'
     | '/sales'
+    | '/sales_reps'
     | '/settings'
     | '/stocktake'
     | '/suppliers'
@@ -305,12 +341,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  Activity_logRoute: typeof Activity_logRoute
   AlertsRoute: typeof AlertsRoute
   BackupRoute: typeof BackupRoute
   CashRoute: typeof CashRoute
   CatalogRoute: typeof CatalogRoute
   CleanupRoute: typeof CleanupRoute
   CustomersRoute: typeof CustomersRoute
+  ExpensesRoute: typeof ExpensesRoute
   InventoryRoute: typeof InventoryRoute
   LabelsRoute: typeof LabelsRoute
   LoginRoute: typeof LoginRoute
@@ -322,6 +360,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   ReturnsRoute: typeof ReturnsRoute
   SalesRoute: typeof SalesRoute
+  Sales_repsRoute: typeof Sales_repsRoute
   SettingsRoute: typeof SettingsRoute
   StocktakeRoute: typeof StocktakeRoute
   SuppliersRoute: typeof SuppliersRoute
@@ -336,6 +375,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity_log': {
+      id: '/activity_log'
+      path: '/activity_log'
+      fullPath: '/activity_log'
+      preLoaderRoute: typeof Activity_logRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/alerts': {
@@ -378,6 +424,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/customers'
       preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expenses': {
+      id: '/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof ExpensesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -457,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sales_reps': {
+      id: '/sales_reps'
+      path: '/sales_reps'
+      fullPath: '/sales_reps'
+      preLoaderRoute: typeof Sales_repsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -497,12 +557,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  Activity_logRoute: Activity_logRoute,
   AlertsRoute: AlertsRoute,
   BackupRoute: BackupRoute,
   CashRoute: CashRoute,
   CatalogRoute: CatalogRoute,
   CleanupRoute: CleanupRoute,
   CustomersRoute: CustomersRoute,
+  ExpensesRoute: ExpensesRoute,
   InventoryRoute: InventoryRoute,
   LabelsRoute: LabelsRoute,
   LoginRoute: LoginRoute,
@@ -514,6 +576,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   ReturnsRoute: ReturnsRoute,
   SalesRoute: SalesRoute,
+  Sales_repsRoute: Sales_repsRoute,
   SettingsRoute: SettingsRoute,
   StocktakeRoute: StocktakeRoute,
   SuppliersRoute: SuppliersRoute,

@@ -1405,6 +1405,245 @@ export type Database = {
         };
         Relationships: [];
       };
+      general_expenses: {
+        Row: {
+          amount: number;
+          cash_transaction_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          currency_code: string;
+          expense_date: string;
+          expense_type: string;
+          id: string;
+          number: number;
+          rate_to_yer: number;
+          category: string;
+          description: string | null;
+        };
+        Insert: {
+          amount?: number;
+          cash_transaction_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          currency_code: string;
+          expense_date?: string;
+          expense_type?: string;
+          id?: string;
+          number?: number;
+          rate_to_yer?: number;
+          category: string;
+          description?: string | null;
+        };
+        Update: {
+          amount?: number;
+          cash_transaction_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          currency_code?: string;
+          expense_date?: string;
+          expense_type?: string;
+          id?: string;
+          number?: number;
+          rate_to_yer?: number;
+          category?: string;
+          description?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "general_expenses_currency_code_fkey";
+            columns: ["currency_code"];
+            isOneToOne: false;
+            referencedRelation: "currencies";
+            referencedColumns: ["code"];
+          },
+        ];
+      };
+      price_categories: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          id: string;
+          multiplier: number;
+          name: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          id?: string;
+          multiplier?: number;
+          name: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          id?: string;
+          multiplier?: number;
+          name?: string;
+        };
+        Relationships: [];
+      };
+      product_free_prices: {
+        Row: {
+          default_price: number;
+          free_price: number;
+          price_difference: number;
+          product_id: string;
+          price_category_id: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          default_price?: number;
+          free_price: number;
+          price_difference?: number;
+          product_id: string;
+          price_category_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          default_price?: number;
+          free_price?: number;
+          price_difference?: number;
+          product_id?: string;
+          price_category_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      rep_commissions: {
+        Row: {
+          commission_amount: number;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          notes: string | null;
+          paid: boolean;
+          paid_at: string | null;
+          paid_by: string | null;
+          period_month: string;
+          rep_id: string;
+          sale_invoice_id: string | null;
+        };
+        Insert: {
+          commission_amount?: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid?: boolean;
+          paid_at?: string | null;
+          paid_by?: string | null;
+          period_month?: string;
+          rep_id: string;
+          sale_invoice_id?: string | null;
+        };
+        Update: {
+          commission_amount?: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          notes?: string | null;
+          paid?: boolean;
+          paid_at?: string | null;
+          paid_by?: string | null;
+          period_month?: string;
+          rep_id?: string;
+          sale_invoice_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rep_commissions_rep_id_fkey";
+            columns: ["rep_id"];
+            isOneToOne: false;
+            referencedRelation: "sales_representatives";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "rep_commissions_sale_invoice_id_fkey";
+            columns: ["sale_invoice_id"];
+            isOneToOne: false;
+            referencedRelation: "sales_invoices";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sales_representatives: {
+        Row: {
+          active: boolean;
+          code: number;
+          commission_rate: number;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          name: string;
+          phone: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          code?: number;
+          commission_rate?: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          code?: number;
+          commission_rate?: number;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name?: string;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      system_activity_log: {
+        Row: {
+          action: string;
+          created_at: string;
+          details: Json;
+          entity_id: string | null;
+          entity_type: string | null;
+          id: string;
+          user_id: string | null;
+          username: string | null;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          details?: Json;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          user_id?: string | null;
+          username?: string | null;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          details?: Json;
+          entity_id?: string | null;
+          entity_type?: string | null;
+          id?: string;
+          user_id?: string | null;
+          username?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1769,6 +2008,64 @@ export type Database = {
         Returns: undefined;
       };
       visible_products: { Args: never; Returns: Json[] };
+      record_general_expense: {
+        Args: {
+          _expense_type: string;
+          _category: string;
+          _description: string | null;
+          _amount: number;
+          _currency_code: string;
+          _rate_to_yer: number;
+          _expense_date: string;
+          _payment_method: string | null;
+        };
+        Returns: string;
+      };
+      record_general_expense_offline: {
+        Args: {
+          _operation_id: string;
+          _expense_type: string;
+          _category: string;
+          _description: string | null;
+          _amount: number;
+          _currency_code: string;
+          _rate_to_yer: number;
+          _expense_date: string;
+          _payment_method: string | null;
+        };
+        Returns: string;
+      };
+      save_sales_representative: {
+        Args: {
+          _id: string | null;
+          _name: string;
+          _phone: string | null;
+          _commission_rate: number;
+          _active: boolean;
+        };
+        Returns: string;
+      };
+      calculate_rep_commission: {
+        Args: { _rep_id: string; _sale_invoice_id: string };
+        Returns: string;
+      };
+      pay_rep_commission: {
+        Args: { _commission_id: string; _payment_method: string | null };
+        Returns: undefined;
+      };
+      set_product_free_price: {
+        Args: { _product_id: string; _price_category_id: string; _free_price: number };
+        Returns: undefined;
+      };
+      log_system_activity: {
+        Args: {
+          _action: string;
+          _entity_type: string | null;
+          _entity_id: string | null;
+          _details: Json;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       app_role: "admin" | "storekeeper" | "cashier";

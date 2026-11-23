@@ -27,6 +27,8 @@ import {
   Menu,
   X,
   RotateCcw,
+  Activity,
+  CreditCard,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
@@ -51,6 +53,9 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/suppliers", label: "الموردون", icon: Truck, roles: ["storekeeper"] },
   { to: "/purchase_orders", label: "أوامر الشراء", icon: ShoppingCart, roles: ["storekeeper"] },
   { to: "/returns", label: "المرتجعات والمردودات", icon: RotateCcw },
+  { to: "/expenses", label: "المصروفات العامة", icon: CreditCard, roles: ["storekeeper"] },
+  { to: "/sales_reps", label: "المناديب والعمولات", icon: Users, roles: ["storekeeper"] },
+  { to: "/activity_log", label: "سجل تحركات النظام", icon: Activity, roles: ["storekeeper"] },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
   { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
