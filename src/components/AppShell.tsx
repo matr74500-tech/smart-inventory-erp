@@ -29,6 +29,11 @@ import {
   RotateCcw,
   Activity,
   CreditCard,
+  Barcode,
+  Palette,
+  Move,
+  Share2,
+  Clock,
 } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
@@ -56,6 +61,17 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/expenses", label: "المصروفات العامة", icon: CreditCard, roles: ["storekeeper"] },
   { to: "/sales_reps", label: "المناديب والعمولات", icon: Users, roles: ["storekeeper"] },
   { to: "/activity_log", label: "سجل تحركات النظام", icon: Activity, roles: ["storekeeper"] },
+  {
+    to: "/scanner_settings",
+    label: "إعدادات ماسح الباركود",
+    icon: Barcode,
+    roles: ["storekeeper"],
+  },
+  { to: "/barcode_labels", label: "إعدادات ملصقات الباركود", icon: Tags, roles: ["storekeeper"] },
+  { to: "/ui_theme", label: "التخصيص والشكل", icon: Palette, roles: ["storekeeper"] },
+  { to: "/home_shortcuts", label: "اختصارات الصفحة الرئيسية", icon: Move, roles: ["storekeeper"] },
+  { to: "/share_settings", label: "إعدادات المشاركة", icon: Share2, roles: ["storekeeper"] },
+  { to: "/system_timezone", label: "التوقيت الزمني", icon: Clock, roles: ["storekeeper"] },
   { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"] },
   { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },

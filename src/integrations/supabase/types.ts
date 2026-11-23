@@ -1644,6 +1644,438 @@ export type Database = {
         };
         Relationships: [];
       };
+      sales_defaults: {
+        Row: {
+          auto_print_receipt: boolean;
+          created_at: string;
+          default_currency_code: string;
+          default_discount: number;
+          default_payment_method: string;
+          default_tax: number;
+          default_tier: string;
+          id: string;
+          page_type: string;
+          print_printer_type: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          auto_print_receipt?: boolean;
+          created_at?: string;
+          default_currency_code?: string;
+          default_discount?: number;
+          default_payment_method?: string;
+          default_tax?: number;
+          default_tier?: string;
+          id?: string;
+          page_type: string;
+          print_printer_type?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          auto_print_receipt?: boolean;
+          created_at?: string;
+          default_currency_code?: string;
+          default_discount?: number;
+          default_payment_method?: string;
+          default_tax?: number;
+          default_tier?: string;
+          id?: string;
+          page_type?: string;
+          print_printer_type?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sales_defaults_default_currency_code_fkey";
+            columns: ["default_currency_code"];
+            isOneToOne: false;
+            referencedRelation: "currencies";
+            referencedColumns: ["code"];
+          },
+        ];
+      };
+      print_settings: {
+        Row: {
+          accent_color: string;
+          copies: number;
+          created_at: string;
+          document_type: string;
+          font_family: string;
+          font_size: number;
+          id: string;
+          margin_bottom: number;
+          margin_left: number;
+          margin_right: number;
+          margin_top: number;
+          orientation: string;
+          paper_size: string;
+          primary_color: string;
+          printer_type: string | null;
+          secondary_color: string;
+          show_barcode: boolean;
+          show_customer_info: boolean;
+          show_date_time: boolean;
+          show_discount: boolean;
+          show_footer: boolean;
+          show_items_table: boolean;
+          show_logo: boolean;
+          show_payment_method: boolean;
+          show_qr_code: boolean;
+          show_shop_address: boolean;
+          show_shop_name: boolean;
+          show_shop_phone: boolean;
+          show_totals: boolean;
+          show_tax: boolean;
+          updated_at: string;
+          footer_text: string | null;
+        };
+        Insert: {
+          accent_color?: string;
+          copies?: number;
+          created_at?: string;
+          document_type: string;
+          font_family?: string;
+          font_size?: number;
+          id?: string;
+          margin_bottom?: number;
+          margin_left?: number;
+          margin_right?: number;
+          margin_top?: number;
+          orientation?: string;
+          paper_size?: string;
+          primary_color?: string;
+          printer_type?: string | null;
+          secondary_color?: string;
+          show_barcode?: boolean;
+          show_customer_info?: boolean;
+          show_date_time?: boolean;
+          show_discount?: boolean;
+          show_footer?: boolean;
+          show_items_table?: boolean;
+          show_logo?: boolean;
+          show_payment_method?: boolean;
+          show_qr_code?: boolean;
+          show_shop_address?: boolean;
+          show_shop_name?: boolean;
+          show_shop_phone?: boolean;
+          show_totals?: boolean;
+          show_tax?: boolean;
+          updated_at?: string;
+          footer_text?: string | null;
+        };
+        Update: {
+          accent_color?: string;
+          copies?: number;
+          created_at?: string;
+          document_type?: string;
+          font_family?: string;
+          font_size?: number;
+          id?: string;
+          margin_bottom?: number;
+          margin_left?: number;
+          margin_right?: number;
+          margin_top?: number;
+          orientation?: string;
+          paper_size?: string;
+          primary_color?: string;
+          printer_type?: string | null;
+          secondary_color?: string;
+          show_barcode?: boolean;
+          show_customer_info?: boolean;
+          show_date_time?: boolean;
+          show_discount?: boolean;
+          show_footer?: boolean;
+          show_items_table?: boolean;
+          show_logo?: boolean;
+          show_payment_method?: boolean;
+          show_qr_code?: boolean;
+          show_shop_address?: boolean;
+          show_shop_name?: boolean;
+          show_shop_phone?: boolean;
+          show_totals?: boolean;
+          show_tax?: boolean;
+          updated_at?: string;
+          footer_text?: string | null;
+        };
+        Relationships: [];
+      };
+      barcode_label_settings: {
+        Row: {
+          created_at: string;
+          custom_price: number | null;
+          id: string;
+          label_height_mm: number;
+          label_width_mm: number;
+          labels_per_page: number;
+          price_category: string | null;
+          price_source: string;
+          product_name_field: string;
+          printer_type: string | null;
+          show_barcode_image: boolean;
+          show_logo: boolean;
+          show_qr_code: boolean;
+          shop_name: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          custom_price?: number;
+          id?: string;
+          label_height_mm?: number;
+          label_width_mm?: number;
+          labels_per_page?: number;
+          price_category?: string | null;
+          price_source?: string;
+          product_name_field?: string;
+          printer_type?: string | null;
+          show_barcode_image?: boolean;
+          show_logo?: boolean;
+          show_qr_code?: boolean;
+          shop_name?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          custom_price?: number;
+          id?: string;
+          label_height_mm?: number;
+          label_width_mm?: number;
+          labels_per_page?: number;
+          price_category?: string | null;
+          price_source?: string;
+          product_name_field?: string;
+          printer_type?: string | null;
+          show_barcode_image?: boolean;
+          show_logo?: boolean;
+          show_qr_code?: boolean;
+          shop_name?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      scanner_settings: {
+        Row: {
+          auto_execute: boolean;
+          beep_on_scan: boolean;
+          created_at: string;
+          id: string;
+          page_path: string;
+          scanner_action: string;
+          target_page: string | null;
+          updated_at: string;
+          vibrate_on_scan: boolean;
+        };
+        Insert: {
+          auto_execute?: boolean;
+          beep_on_scan?: boolean;
+          created_at?: string;
+          id?: string;
+          page_path: string;
+          scanner_action?: string;
+          target_page?: string | null;
+          updated_at?: string;
+          vibrate_on_scan?: boolean;
+        };
+        Update: {
+          auto_execute?: boolean;
+          beep_on_scan?: boolean;
+          created_at?: string;
+          id?: string;
+          page_path?: string;
+          scanner_action?: string;
+          target_page?: string | null;
+          updated_at?: string;
+          vibrate_on_scan?: boolean;
+        };
+        Relationships: [];
+      };
+      ui_theme_settings: {
+        Row: {
+          accent_color: string;
+          compact_mode: boolean;
+          created_at: string;
+          font_family: string;
+          font_size: string;
+          id: string;
+          language: string;
+          notification_enabled: boolean;
+          notification_importance: string;
+          notification_sound: boolean;
+          notification_vibrate: boolean;
+          primary_color: string;
+          rtl_layout: boolean;
+          secondary_color: string;
+          show_animations: boolean;
+          show_avatars: boolean;
+          theme_mode: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          accent_color?: string;
+          compact_mode?: boolean;
+          created_at?: string;
+          font_family?: string;
+          font_size?: string;
+          id?: string;
+          language?: string;
+          notification_enabled?: boolean;
+          notification_importance?: string;
+          notification_sound?: boolean;
+          notification_vibrate?: boolean;
+          primary_color?: string;
+          rtl_layout?: boolean;
+          secondary_color?: string;
+          show_animations?: boolean;
+          show_avatars?: boolean;
+          theme_mode?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          accent_color?: string;
+          compact_mode?: boolean;
+          created_at?: string;
+          font_family?: string;
+          font_size?: string;
+          id?: string;
+          language?: string;
+          notification_enabled?: boolean;
+          notification_importance?: string;
+          notification_sound?: boolean;
+          notification_vibrate?: boolean;
+          primary_color?: string;
+          rtl_layout?: boolean;
+          secondary_color?: string;
+          show_animations?: boolean;
+          show_avatars?: boolean;
+          theme_mode?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ui_theme_settings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "auth.users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      home_shortcuts: {
+        Row: {
+          created_at: string;
+          id: string;
+          icon: string;
+          is_visible: boolean;
+          label: string;
+          page_path: string;
+          sort_order: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          icon?: string;
+          is_visible?: boolean;
+          label?: string;
+          page_path: string;
+          sort_order?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          icon?: string;
+          is_visible?: boolean;
+          label?: string;
+          page_path?: string;
+          sort_order?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "home_shortcuts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "auth.users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      share_settings: {
+        Row: {
+          auto_share: boolean;
+          created_at: string;
+          default_message: string | null;
+          document_type: string;
+          id: string;
+          require_confirmation: boolean;
+          share_methods: Json;
+          updated_at: string;
+        };
+        Insert: {
+          auto_share?: boolean;
+          created_at?: string;
+          default_message?: string | null;
+          document_type: string;
+          id?: string;
+          require_confirmation?: boolean;
+          share_methods?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          auto_share?: boolean;
+          created_at?: string;
+          default_message?: string | null;
+          document_type?: string;
+          id?: string;
+          require_confirmation?: boolean;
+          share_methods?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      system_timezone: {
+        Row: {
+          auto_detect: boolean;
+          created_at: string;
+          date_format: string;
+          id: number;
+          time_format: string;
+          timezone: string;
+          updated_at: string;
+          use_24h_format: boolean;
+        };
+        Insert: {
+          auto_detect?: boolean;
+          created_at?: string;
+          date_format?: string;
+          id?: number;
+          time_format?: string;
+          timezone?: string;
+          updated_at?: string;
+          use_24h_format?: boolean;
+        };
+        Update: {
+          auto_detect?: boolean;
+          created_at?: string;
+          date_format?: string;
+          id?: number;
+          time_format?: string;
+          timezone?: string;
+          updated_at?: string;
+          use_24h_format?: boolean;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -2063,6 +2495,143 @@ export type Database = {
           _entity_type: string | null;
           _entity_id: string | null;
           _details: Json;
+        };
+        Returns: undefined;
+      };
+      save_sales_defaults: {
+        Args: {
+          _page_type: string;
+          _default_tier: string;
+          _default_currency_code: string;
+          _default_payment_method: string;
+          _default_discount: number;
+          _default_tax: number;
+          _auto_print_receipt: boolean;
+          _print_printer_type: string | null;
+        };
+        Returns: undefined;
+      };
+      save_print_settings: {
+        Args: {
+          _document_type: string;
+          _paper_size: string;
+          _orientation: string;
+          _margin_top: number;
+          _margin_bottom: number;
+          _margin_left: number;
+          _margin_right: number;
+          _font_family: string;
+          _font_size: number;
+          _primary_color: string;
+          _secondary_color: string;
+          _accent_color: string;
+          _show_logo: boolean;
+          _show_shop_name: boolean;
+          _show_shop_address: boolean;
+          _show_shop_phone: boolean;
+          _show_customer_info: boolean;
+          _show_items_table: boolean;
+          _show_totals: boolean;
+          _show_tax: boolean;
+          _show_discount: boolean;
+          _show_payment_method: boolean;
+          _show_date_time: boolean;
+          _show_qr_code: boolean;
+          _show_barcode: boolean;
+          _show_footer: boolean;
+          _footer_text: string | null;
+          _printer_type: string | null;
+          _copies: number;
+        };
+        Returns: undefined;
+      };
+      save_barcode_label_settings: {
+        Args: {
+          _shop_name: string;
+          _product_name_field: string;
+          _price_source: string;
+          _price_category: string | null;
+          _custom_price: number | null;
+          _title: string;
+          _show_logo: boolean;
+          _show_barcode_image: boolean;
+          _show_qr_code: boolean;
+          _label_width_mm: number;
+          _label_height_mm: number;
+          _labels_per_page: number;
+          _printer_type: string | null;
+        };
+        Returns: undefined;
+      };
+      save_scanner_settings: {
+        Args: {
+          _page_path: string;
+          _scanner_action: string;
+          _target_page: string | null;
+          _auto_execute: boolean;
+          _beep_on_scan: boolean;
+          _vibrate_on_scan: boolean;
+        };
+        Returns: undefined;
+      };
+      save_ui_theme_settings: {
+        Args: {
+          _theme_mode: string;
+          _primary_color: string;
+          _secondary_color: string;
+          _accent_color: string;
+          _font_family: string;
+          _font_size: string;
+          _language: string;
+          _rtl_layout: boolean;
+          _compact_mode: boolean;
+          _show_avatars: boolean;
+          _show_animations: boolean;
+          _notification_enabled: boolean;
+          _notification_importance: string;
+          _notification_sound: boolean;
+          _notification_vibrate: boolean;
+        };
+        Returns: undefined;
+      };
+      add_home_shortcut: {
+        Args: {
+          _page_path: string;
+          _label: string;
+          _icon: string;
+          _sort_order: number;
+          _is_visible: boolean;
+        };
+        Returns: string;
+      };
+      update_home_shortcut: {
+        Args: {
+          _id: string;
+          _label: string;
+          _icon: string;
+          _sort_order: number;
+          _is_visible: boolean;
+        };
+        Returns: undefined;
+      };
+      remove_home_shortcut: { Args: { _id: string }; Returns: undefined };
+      save_share_settings: {
+        Args: {
+          _document_type: string;
+          _auto_share: boolean;
+          _share_methods: Json;
+          _default_message: string | null;
+          _require_confirmation: boolean;
+        };
+        Returns: undefined;
+      };
+      save_system_timezone: {
+        Args: {
+          _timezone: string;
+          _auto_detect: boolean;
+          _use_24h_format: boolean;
+          _date_format: string;
+          _time_format: string;
         };
         Returns: undefined;
       };

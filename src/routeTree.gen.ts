@@ -13,11 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as Activity_logRouteImport } from './routes/activity_log'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as BackupRouteImport } from './routes/backup'
+import { Route as Barcode_labelsRouteImport } from './routes/barcode_labels'
 import { Route as CashRouteImport } from './routes/cash'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as CleanupRouteImport } from './routes/cleanup'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as ExpensesRouteImport } from './routes/expenses'
+import { Route as Home_shortcutsRouteImport } from './routes/home_shortcuts'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LoginRouteImport } from './routes/login'
@@ -30,10 +32,15 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as SalesRouteImport } from './routes/sales'
 import { Route as Sales_repsRouteImport } from './routes/sales_reps'
+import { Route as Sales_settingsRouteImport } from './routes/sales_settings'
+import { Route as Scanner_settingsRouteImport } from './routes/scanner_settings'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as Share_settingsRouteImport } from './routes/share_settings'
 import { Route as StocktakeRouteImport } from './routes/stocktake'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
+import { Route as System_timezoneRouteImport } from './routes/system_timezone'
 import { Route as TransfersRouteImport } from './routes/transfers'
+import { Route as Ui_themeRouteImport } from './routes/ui_theme'
 import { Route as UsersRouteImport } from './routes/users'
 
 const IndexRoute = IndexRouteImport.update({
@@ -54,6 +61,11 @@ const AlertsRoute = AlertsRouteImport.update({
 const BackupRoute = BackupRouteImport.update({
   id: '/backup',
   path: '/backup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Barcode_labelsRoute = Barcode_labelsRouteImport.update({
+  id: '/barcode_labels',
+  path: '/barcode_labels',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CashRoute = CashRouteImport.update({
@@ -79,6 +91,11 @@ const CustomersRoute = CustomersRouteImport.update({
 const ExpensesRoute = ExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Home_shortcutsRoute = Home_shortcutsRouteImport.update({
+  id: '/home_shortcuts',
+  path: '/home_shortcuts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -141,9 +158,24 @@ const Sales_repsRoute = Sales_repsRouteImport.update({
   path: '/sales_reps',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Sales_settingsRoute = Sales_settingsRouteImport.update({
+  id: '/sales_settings',
+  path: '/sales_settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Scanner_settingsRoute = Scanner_settingsRouteImport.update({
+  id: '/scanner_settings',
+  path: '/scanner_settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Share_settingsRoute = Share_settingsRouteImport.update({
+  id: '/share_settings',
+  path: '/share_settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StocktakeRoute = StocktakeRouteImport.update({
@@ -156,9 +188,19 @@ const SuppliersRoute = SuppliersRouteImport.update({
   path: '/suppliers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const System_timezoneRoute = System_timezoneRouteImport.update({
+  id: '/system_timezone',
+  path: '/system_timezone',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransfersRoute = TransfersRouteImport.update({
   id: '/transfers',
   path: '/transfers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Ui_themeRoute = Ui_themeRouteImport.update({
+  id: '/ui_theme',
+  path: '/ui_theme',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsersRoute = UsersRouteImport.update({
@@ -172,11 +214,13 @@ export interface FileRoutesByFullPath {
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
+  '/barcode_labels': typeof Barcode_labelsRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/home_shortcuts': typeof Home_shortcutsRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -189,10 +233,15 @@ export interface FileRoutesByFullPath {
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/sales_reps': typeof Sales_repsRoute
+  '/sales_settings': typeof Sales_settingsRoute
+  '/scanner_settings': typeof Scanner_settingsRoute
   '/settings': typeof SettingsRoute
+  '/share_settings': typeof Share_settingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
+  '/system_timezone': typeof System_timezoneRoute
   '/transfers': typeof TransfersRoute
+  '/ui_theme': typeof Ui_themeRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
@@ -200,11 +249,13 @@ export interface FileRoutesByTo {
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
+  '/barcode_labels': typeof Barcode_labelsRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/home_shortcuts': typeof Home_shortcutsRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -217,10 +268,15 @@ export interface FileRoutesByTo {
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/sales_reps': typeof Sales_repsRoute
+  '/sales_settings': typeof Sales_settingsRoute
+  '/scanner_settings': typeof Scanner_settingsRoute
   '/settings': typeof SettingsRoute
+  '/share_settings': typeof Share_settingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
+  '/system_timezone': typeof System_timezoneRoute
   '/transfers': typeof TransfersRoute
+  '/ui_theme': typeof Ui_themeRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
@@ -229,11 +285,13 @@ export interface FileRoutesById {
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
+  '/barcode_labels': typeof Barcode_labelsRoute
   '/cash': typeof CashRoute
   '/catalog': typeof CatalogRoute
   '/cleanup': typeof CleanupRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
+  '/home_shortcuts': typeof Home_shortcutsRoute
   '/inventory': typeof InventoryRoute
   '/labels': typeof LabelsRoute
   '/login': typeof LoginRoute
@@ -246,10 +304,15 @@ export interface FileRoutesById {
   '/returns': typeof ReturnsRoute
   '/sales': typeof SalesRoute
   '/sales_reps': typeof Sales_repsRoute
+  '/sales_settings': typeof Sales_settingsRoute
+  '/scanner_settings': typeof Scanner_settingsRoute
   '/settings': typeof SettingsRoute
+  '/share_settings': typeof Share_settingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
+  '/system_timezone': typeof System_timezoneRoute
   '/transfers': typeof TransfersRoute
+  '/ui_theme': typeof Ui_themeRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
@@ -259,11 +322,13 @@ export interface FileRouteTypes {
     | '/activity_log'
     | '/alerts'
     | '/backup'
+    | '/barcode_labels'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
     | '/expenses'
+    | '/home_shortcuts'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -276,10 +341,15 @@ export interface FileRouteTypes {
     | '/returns'
     | '/sales'
     | '/sales_reps'
+    | '/sales_settings'
+    | '/scanner_settings'
     | '/settings'
+    | '/share_settings'
     | '/stocktake'
     | '/suppliers'
+    | '/system_timezone'
     | '/transfers'
+    | '/ui_theme'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -287,11 +357,13 @@ export interface FileRouteTypes {
     | '/activity_log'
     | '/alerts'
     | '/backup'
+    | '/barcode_labels'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
     | '/expenses'
+    | '/home_shortcuts'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -304,10 +376,15 @@ export interface FileRouteTypes {
     | '/returns'
     | '/sales'
     | '/sales_reps'
+    | '/sales_settings'
+    | '/scanner_settings'
     | '/settings'
+    | '/share_settings'
     | '/stocktake'
     | '/suppliers'
+    | '/system_timezone'
     | '/transfers'
+    | '/ui_theme'
     | '/users'
   id:
     | '__root__'
@@ -315,11 +392,13 @@ export interface FileRouteTypes {
     | '/activity_log'
     | '/alerts'
     | '/backup'
+    | '/barcode_labels'
     | '/cash'
     | '/catalog'
     | '/cleanup'
     | '/customers'
     | '/expenses'
+    | '/home_shortcuts'
     | '/inventory'
     | '/labels'
     | '/login'
@@ -332,10 +411,15 @@ export interface FileRouteTypes {
     | '/returns'
     | '/sales'
     | '/sales_reps'
+    | '/sales_settings'
+    | '/scanner_settings'
     | '/settings'
+    | '/share_settings'
     | '/stocktake'
     | '/suppliers'
+    | '/system_timezone'
     | '/transfers'
+    | '/ui_theme'
     | '/users'
   fileRoutesById: FileRoutesById
 }
@@ -344,11 +428,13 @@ export interface RootRouteChildren {
   Activity_logRoute: typeof Activity_logRoute
   AlertsRoute: typeof AlertsRoute
   BackupRoute: typeof BackupRoute
+  Barcode_labelsRoute: typeof Barcode_labelsRoute
   CashRoute: typeof CashRoute
   CatalogRoute: typeof CatalogRoute
   CleanupRoute: typeof CleanupRoute
   CustomersRoute: typeof CustomersRoute
   ExpensesRoute: typeof ExpensesRoute
+  Home_shortcutsRoute: typeof Home_shortcutsRoute
   InventoryRoute: typeof InventoryRoute
   LabelsRoute: typeof LabelsRoute
   LoginRoute: typeof LoginRoute
@@ -361,10 +447,15 @@ export interface RootRouteChildren {
   ReturnsRoute: typeof ReturnsRoute
   SalesRoute: typeof SalesRoute
   Sales_repsRoute: typeof Sales_repsRoute
+  Sales_settingsRoute: typeof Sales_settingsRoute
+  Scanner_settingsRoute: typeof Scanner_settingsRoute
   SettingsRoute: typeof SettingsRoute
+  Share_settingsRoute: typeof Share_settingsRoute
   StocktakeRoute: typeof StocktakeRoute
   SuppliersRoute: typeof SuppliersRoute
+  System_timezoneRoute: typeof System_timezoneRoute
   TransfersRoute: typeof TransfersRoute
+  Ui_themeRoute: typeof Ui_themeRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -396,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/backup'
       fullPath: '/backup'
       preLoaderRoute: typeof BackupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/barcode_labels': {
+      id: '/barcode_labels'
+      path: '/barcode_labels'
+      fullPath: '/barcode_labels'
+      preLoaderRoute: typeof Barcode_labelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cash': {
@@ -431,6 +529,13 @@ declare module '@tanstack/react-router' {
       path: '/expenses'
       fullPath: '/expenses'
       preLoaderRoute: typeof ExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home_shortcuts': {
+      id: '/home_shortcuts'
+      path: '/home_shortcuts'
+      fullPath: '/home_shortcuts'
+      preLoaderRoute: typeof Home_shortcutsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -517,11 +622,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Sales_repsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sales_settings': {
+      id: '/sales_settings'
+      path: '/sales_settings'
+      fullPath: '/sales_settings'
+      preLoaderRoute: typeof Sales_settingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scanner_settings': {
+      id: '/scanner_settings'
+      path: '/scanner_settings'
+      fullPath: '/scanner_settings'
+      preLoaderRoute: typeof Scanner_settingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share_settings': {
+      id: '/share_settings'
+      path: '/share_settings'
+      fullPath: '/share_settings'
+      preLoaderRoute: typeof Share_settingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stocktake': {
@@ -538,11 +664,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuppliersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/system_timezone': {
+      id: '/system_timezone'
+      path: '/system_timezone'
+      fullPath: '/system_timezone'
+      preLoaderRoute: typeof System_timezoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/transfers': {
       id: '/transfers'
       path: '/transfers'
       fullPath: '/transfers'
       preLoaderRoute: typeof TransfersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ui_theme': {
+      id: '/ui_theme'
+      path: '/ui_theme'
+      fullPath: '/ui_theme'
+      preLoaderRoute: typeof Ui_themeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/users': {
@@ -560,11 +700,13 @@ const rootRouteChildren: RootRouteChildren = {
   Activity_logRoute: Activity_logRoute,
   AlertsRoute: AlertsRoute,
   BackupRoute: BackupRoute,
+  Barcode_labelsRoute: Barcode_labelsRoute,
   CashRoute: CashRoute,
   CatalogRoute: CatalogRoute,
   CleanupRoute: CleanupRoute,
   CustomersRoute: CustomersRoute,
   ExpensesRoute: ExpensesRoute,
+  Home_shortcutsRoute: Home_shortcutsRoute,
   InventoryRoute: InventoryRoute,
   LabelsRoute: LabelsRoute,
   LoginRoute: LoginRoute,
@@ -577,10 +719,15 @@ const rootRouteChildren: RootRouteChildren = {
   ReturnsRoute: ReturnsRoute,
   SalesRoute: SalesRoute,
   Sales_repsRoute: Sales_repsRoute,
+  Sales_settingsRoute: Sales_settingsRoute,
+  Scanner_settingsRoute: Scanner_settingsRoute,
   SettingsRoute: SettingsRoute,
+  Share_settingsRoute: Share_settingsRoute,
   StocktakeRoute: StocktakeRoute,
   SuppliersRoute: SuppliersRoute,
+  System_timezoneRoute: System_timezoneRoute,
   TransfersRoute: TransfersRoute,
+  Ui_themeRoute: Ui_themeRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
