@@ -4,11 +4,31 @@ import type { Database, Json, TablesInsert } from "@/integrations/supabase/types
 const KEY = "offline_queue_v1";
 type TableName = keyof Database["public"]["Tables"];
 const TABLE_NAMES: TableName[] = [
-  "app_settings", "backups", "categories", "customers", "currencies", "daily_cash_closings",
-  "custom_fields", "cash_transactions", "sales_invoices", "sales_items", "vouchers",
-  "exchange_rates", "employee_permissions", "products", "profiles", "purchase_invoices",
-  "purchase_items", "reorder_requests", "shelf_stock", "stock", "stock_minimums",
-  "stock_movements", "units", "user_roles", "warehouses",
+  "app_settings",
+  "backups",
+  "categories",
+  "customers",
+  "currencies",
+  "daily_cash_closings",
+  "custom_fields",
+  "cash_transactions",
+  "sales_invoices",
+  "sales_items",
+  "vouchers",
+  "exchange_rates",
+  "employee_permissions",
+  "products",
+  "profiles",
+  "purchase_invoices",
+  "purchase_items",
+  "reorder_requests",
+  "shelf_stock",
+  "stock",
+  "stock_minimums",
+  "stock_movements",
+  "units",
+  "user_roles",
+  "warehouses",
 ];
 
 export type PendingItem = {
@@ -36,14 +56,16 @@ export function getQueue(): PendingItem[] {
 function isPendingItem(value: unknown): value is PendingItem {
   if (typeof value !== "object" || value === null) return false;
   const item = value as Record<string, unknown>;
-  return typeof item["id"] === "string"
-    && typeof item["table"] === "string"
-    && TABLE_NAMES.includes(item["table"] as TableName)
-    && typeof item["data"] === "object"
-    && item["data"] !== null
-    && !Array.isArray(item["data"])
-    && typeof item["createdAt"] === "number"
-    && Number.isFinite(item["createdAt"]);
+  return (
+    typeof item["id"] === "string" &&
+    typeof item["table"] === "string" &&
+    TABLE_NAMES.includes(item["table"] as TableName) &&
+    typeof item["data"] === "object" &&
+    item["data"] !== null &&
+    !Array.isArray(item["data"]) &&
+    typeof item["createdAt"] === "number" &&
+    Number.isFinite(item["createdAt"])
+  );
 }
 
 export function addToQueue<T extends TableName>(table: T, data: TablesInsert<T>) {

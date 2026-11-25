@@ -4,11 +4,15 @@ import {
   countDiff,
   expiryStatus,
   ean13,
+  findByCode,
   getMovements,
   isValidEan13,
   logMovement,
+  num,
+  str,
   toBaseQty,
 } from "./inventory-utils";
+import type { Product } from "./inventory-utils";
 
 describe("inventory rules", () => {
   it("generated barcodes start with 628 and carry a valid EAN-13 check digit", () => {
@@ -59,5 +63,42 @@ describe("movement log", () => {
     localStorage.setItem("suhail_movements", JSON.stringify([{ productId: 1 }]));
 
     expect(() => getMovements()).toThrow("Stored movement log has an invalid format");
+  });
+});
+
+describe("findByCode", () => {
+  const products = [
+    { barcode: "B1", custom_barcode: null, code: "P1" },
+    { barcode: null, custom_barcode: "C2", code: "P2" },
+  ] as unknown as Product[];
+
+  it("matches factory barcode, generated barcode or product code", () => {
+    expect(findByCode(products, "B1")).toBe(products[0]);
+    expect(findByCode(products, "C2")).toBe(products[1]);
+    expect(findByCode(products, "P2")).toBe(products[1]);
+  });
+
+  it("trims the input and ignores blanks", () => {
+    expect(findByCode(products, " B1 ")).toBe(products[0]);
+    expect(findByCode(products, "")).toBeUndefined();
+  });
+
+  it("returns undefined for unknown codes", () => {
+    expect(findByCode(products, "nope")).toBeUndefined();
+  });
+});
+
+describe("num and str", () => {
+  it("parses grouped numbers and rejects junk as zero", () => {
+    expect(num(" 1,234.5 ")).toBe(1234.5);
+    expect(num("")).toBe(0);
+    expect(num("abc")).toBe(0);
+    expect(num(undefined)).toBe(0);
+  });
+
+  it("keeps strings trimmed", () => {
+    expect(str(null)).toBe("");
+    expect(str("  سكر  ")).toBe("سكر");
+    expect(str(5)).toBe("5");
   });
 });

@@ -171,11 +171,4 @@ drop policy "admin manage warehouses" on public.warehouses;
 create policy "managers manage warehouses" on public.warehouses for all to authenticated
   using (public.can_manage_stock(auth.uid())) with check (public.can_manage_stock(auth.uid()));
 
--- storage policies for product images
-create policy "public read product images" on storage.objects for select using (bucket_id = 'product-images');
-create policy "managers upload product images" on storage.objects for insert to authenticated
-  with check (bucket_id = 'product-images' and public.can_manage_stock(auth.uid()));
-create policy "managers update product images" on storage.objects for update to authenticated
-  using (bucket_id = 'product-images' and public.can_manage_stock(auth.uid()));
-
 alter publication supabase_realtime add table public.categories, public.units, public.custom_fields, public.warehouses, public.app_settings, public.purchase_invoices;

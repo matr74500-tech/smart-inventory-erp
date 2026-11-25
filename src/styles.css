@@ -49,6 +49,18 @@
   --color-chart-3: var(--success);
   --color-chart-4: var(--warning);
   --color-chart-5: var(--destructive);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-gold-soft: var(--gold-soft);
+  --color-hero: var(--hero);
+  --color-hero-foreground: var(--hero-foreground);
+  --color-hero-muted: var(--hero-muted);
+  --color-surface-soft: var(--surface-soft);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-hero: var(--hero-shadow);
+  --shadow-gold: var(--gold-shadow);
 }
 
 :root {
@@ -86,6 +98,18 @@
   --sidebar-ring: oklch(0.78 0.15 70);
   --gradient-brand: linear-gradient(135deg, oklch(0.36 0.08 200), oklch(0.48 0.09 185));
   --shadow-card: 0 1px 2px oklch(0.2 0.03 200 / 6%), 0 8px 24px -12px oklch(0.2 0.03 200 / 18%);
+  --gold: oklch(0.84 0.13 85);
+  --gold-foreground: oklch(0.25 0.05 65);
+  --gold-soft: oklch(0.95 0.03 85);
+  --hero: oklch(0.26 0.05 205);
+  --hero-foreground: oklch(0.97 0.01 85);
+  --hero-muted: oklch(0.83 0.02 200);
+  --surface-soft: oklch(0.95 0.01 85);
+  --success-soft: oklch(0.94 0.03 155);
+  --warning-soft: oklch(0.95 0.04 80);
+  --danger-soft: oklch(0.95 0.02 27);
+  --hero-shadow: 0 24px 60px -24px oklch(0.2 0.04 205 / 55%);
+  --gold-shadow: 0 10px 24px -10px oklch(0.75 0.14 85 / 65%);
 }
 
 @layer base {
@@ -97,7 +121,9 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     font-family: var(--font-display);
   }
 }
@@ -107,6 +133,52 @@
 }
 @utility shadow-card {
   box-shadow: var(--shadow-card);
+}
+
+@layer components {
+  .luxury-hero {
+    background-image:
+      radial-gradient(circle at 15% 15%, oklch(0.45 0.1 195 / 55%), transparent 45%),
+      radial-gradient(circle at 85% 85%, oklch(0.6 0.12 85 / 18%), transparent 40%),
+      linear-gradient(120deg, var(--hero), oklch(0.34 0.07 195));
+  }
+
+  .hero-orb {
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+  }
+
+  .hero-orb-one {
+    top: -6rem;
+    left: -4rem;
+    width: 16rem;
+    height: 16rem;
+    background: oklch(0.78 0.14 85 / 12%);
+    filter: blur(4px);
+  }
+
+  .hero-orb-two {
+    right: -5rem;
+    bottom: -8rem;
+    width: 20rem;
+    height: 20rem;
+    background: oklch(0.62 0.13 195 / 16%);
+    filter: blur(6px);
+  }
+
+  .luxury-card {
+    border-radius: 1.5rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  .section-eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-muted-foreground);
+  }
 }
 
 @media print {

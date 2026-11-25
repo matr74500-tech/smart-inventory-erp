@@ -198,3 +198,14 @@ grant execute on function public.set_stock, public.transfer_stock, public.receiv
 alter publication supabase_realtime add table public.products, public.stock, public.reorder_requests, public.stock_movements;
 
 insert into public.warehouses (name) values ('المستودع الرئيسي'), ('فرع المبيعات');
+
+-- create storage bucket for product images
+insert into storage.buckets (id, name, public) values ('product-images', 'product-images', true)
+on conflict (id) do nothing;
+create policy "public read product images" on storage.objects for select using (bucket_id = 'product-images');
+create policy "managers upload product images" on storage.objects for insert to authenticated
+  with check (bucket_id = 'product-images' and public.can_manage_stock(auth.uid()));
+create policy "managers update product images" on storage.objects for update to authenticated
+  using (bucket_id = 'product-images' and public.can_manage_stock(auth.uid()));
+create policy "managers delete product images" on storage.objects for delete to authenticated
+  using (bucket_id = 'product-images' and public.can_manage_stock(auth.uid()));

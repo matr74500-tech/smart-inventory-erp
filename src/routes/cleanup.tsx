@@ -3,7 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cleanup")({
@@ -11,15 +17,35 @@ export const Route = createFileRoute("/cleanup")({
 });
 
 const scopes = [
-  { value: "stock", label: "أرصدة المخزون", description: "حذف الأرصدة وحركات المخزون وطلبات التوريد." },
+  {
+    value: "stock",
+    label: "أرصدة المخزون",
+    description: "حذف الأرصدة وحركات المخزون وطلبات التوريد.",
+  },
   { value: "movements", label: "سجل الحركات", description: "حذف سجل حركات المخزون فقط." },
   { value: "purchases", label: "فواتير المشتريات", description: "حذف فواتير المشتريات وتفاصيلها." },
   { value: "reorders", label: "طلبات التوريد", description: "حذف طلبات التوريد." },
   { value: "backups", label: "النسخ الاحتياطية", description: "حذف النسخ الاحتياطية المحفوظة." },
-  { value: "products", label: "الأصناف", description: "حذف الأصناف والأرصدة والحركات وفواتير المشتريات." },
-  { value: "all", label: "كل البيانات", description: "حذف الأصناف والبيانات التشغيلية والإعدادات الأساسية." },
-  { value: "warehouse", label: "بيانات مستودع", description: "حذف أرصدة وحركات وفواتير المستودع المحدد مع الإبقاء عليه." },
-  { value: "warehouse_remove", label: "حذف مستودع", description: "حذف بيانات المستودع المحدد ثم حذف المستودع نهائيًا." },
+  {
+    value: "products",
+    label: "الأصناف",
+    description: "حذف الأصناف والأرصدة والحركات وفواتير المشتريات.",
+  },
+  {
+    value: "all",
+    label: "كل البيانات",
+    description: "حذف الأصناف والبيانات التشغيلية والإعدادات الأساسية.",
+  },
+  {
+    value: "warehouse",
+    label: "بيانات مستودع",
+    description: "حذف أرصدة وحركات وفواتير المستودع المحدد مع الإبقاء عليه.",
+  },
+  {
+    value: "warehouse_remove",
+    label: "حذف مستودع",
+    description: "حذف بيانات المستودع المحدد ثم حذف المستودع نهائيًا.",
+  },
 ] as const;
 
 function CleanupPage() {
@@ -59,7 +85,11 @@ function CleanupPage() {
     const target = needsWarehouse
       ? warehouses.find((warehouse) => warehouse.id === warehouseId)?.name
       : selectedScope.label;
-    if (!window.confirm(`سيتم تنفيذ العملية التالية نهائيًا: ${selectedScope.label}${target ? ` — ${target}` : ""}.\nلا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟`)) {
+    if (
+      !window.confirm(
+        `سيتم تنفيذ العملية التالية نهائيًا: ${selectedScope.label}${target ? ` — ${target}` : ""}.\nلا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟`,
+      )
+    ) {
       return;
     }
 
@@ -86,34 +116,61 @@ function CleanupPage() {
     <AppShell title="حذف وتنظيف البيانات">
       <section className="mx-auto max-w-2xl space-y-5 rounded-xl bg-card p-5 shadow-card">
         <p className="text-sm text-muted-foreground">
-          هذه العمليات نهائية ومخصصة للمدير. اختر نوع البيانات المطلوب تنظيفها، وستظهر رسالة تأكيد قبل التنفيذ.
+          هذه العمليات نهائية ومخصصة للمدير. اختر نوع البيانات المطلوب تنظيفها، وستظهر رسالة تأكيد
+          قبل التنفيذ.
         </p>
         <div className="space-y-2">
           <label className="text-sm font-medium">نوع التنظيف</label>
-          <Select value={scope} onValueChange={(value) => { setScope(value); setWarehouseId(""); }}>
+          <Select
+            value={scope}
+            onValueChange={(value) => {
+              setScope(value);
+              setWarehouseId("");
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="اختر نوع البيانات" />
             </SelectTrigger>
             <SelectContent>
-              {scopes.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+              {scopes.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          {selectedScope && <p className="text-sm text-muted-foreground">{selectedScope.description}</p>}
+          {selectedScope && (
+            <p className="text-sm text-muted-foreground">{selectedScope.description}</p>
+          )}
         </div>
         {needsWarehouse && (
           <div className="space-y-2">
             <label className="text-sm font-medium">المستودع</label>
-            <Select value={warehouseId} onValueChange={setWarehouseId} disabled={loadingWarehouses || !warehouses.length}>
+            <Select
+              value={warehouseId}
+              onValueChange={setWarehouseId}
+              disabled={loadingWarehouses || !warehouses.length}
+            >
               <SelectTrigger>
-                <SelectValue placeholder={loadingWarehouses ? "جارٍ تحميل المستودعات…" : "اختر المستودع"} />
+                <SelectValue
+                  placeholder={loadingWarehouses ? "جارٍ تحميل المستودعات…" : "اختر المستودع"}
+                />
               </SelectTrigger>
               <SelectContent>
-                {warehouses.map((warehouse) => <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem>)}
+                {warehouses.map((warehouse) => (
+                  <SelectItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         )}
-        <Button variant="destructive" onClick={cleanup} disabled={busy || !selectedScope || (needsWarehouse && !warehouseId)}>
+        <Button
+          variant="destructive"
+          onClick={cleanup}
+          disabled={busy || !selectedScope || (needsWarehouse && !warehouseId)}
+        >
           {busy ? "جارٍ التنفيذ…" : "تنفيذ التنظيف"}
         </Button>
       </section>

@@ -117,7 +117,11 @@ export async function writeSheet(rows: Record<string, unknown>[], filename: stri
 }
 
 export const num = (v: unknown) => {
-  const n = Number(String(v ?? "").replace(/,/g, "").trim());
+  const n = Number(
+    String(v ?? "")
+      .replace(/,/g, "")
+      .trim(),
+  );
   return Number.isFinite(n) ? n : 0;
 };
 export const str = (v: unknown) => String(v ?? "").trim();

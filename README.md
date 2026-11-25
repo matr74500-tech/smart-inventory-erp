@@ -1,6 +1,6 @@
 # Smart Inventory ERP
 
-يرجى إجراء فحص شامل وكامل (Full Codebase Audit & Update) وتطبيق كافة التعديلات والإضافات التالية على مشروع (SuhailSoft POS & ERP)، مع تنفيذ شرط إزالة الهوية بالكامل:
+هذا المشروع نظام عربي لإدارة المخزون ونقاط البيع. تتضمن هذه الوثيقة متطلبات الفحص والتحديث الأساسية:
 
 
 
@@ -45,16 +45,6 @@
 7. فحص أخطاء البناء وتجهيز APK (Build Readiness):
 
    - مراجعة ملف app.json و package.json والتأكد من أذونات الأندرويد وخلو الكود من أخطاء الـ TypeScript والـ Imports لضمان نجاح بناء الـ APK عبر GitHub Actions بسلاسة.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/a43ce18c-9628-4426-a1d2-6f05cab1b285).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 

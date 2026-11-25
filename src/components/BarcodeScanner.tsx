@@ -34,7 +34,10 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
           },
           () => {},
         );
-        if (cancelled && s.isScanning) s.stop().then(() => s.clear()).catch(() => {});
+        if (cancelled && s.isScanning)
+          s.stop()
+            .then(() => s.clear())
+            .catch(() => {});
       } catch {
         if (!cancelled) setError("تعذر تشغيل الكاميرا. تأكد من منح إذن الكاميرا.");
       }
@@ -45,7 +48,9 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
       if (!s) return;
       try {
         if (s.isScanning) {
-          s.stop().then(() => s.clear()).catch(() => {});
+          s.stop()
+            .then(() => s.clear())
+            .catch(() => {});
         } else {
           s.clear();
         }
@@ -57,7 +62,13 @@ export function BarcodeScanner({ onDetected }: { onDetected: (code: string) => v
 
   return (
     <>
-      <Button type="button" variant="secondary" size="icon" onClick={() => setOpen(true)} aria-label="مسح الباركود">
+      <Button
+        type="button"
+        variant="secondary"
+        size="icon"
+        onClick={() => setOpen(true)}
+        aria-label="مسح الباركود"
+      >
         <ScanLine className="size-5" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
