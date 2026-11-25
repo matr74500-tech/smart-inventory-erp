@@ -150,7 +150,7 @@ function ExpensesPage() {
     const args = {
       _expense_type: expenseType,
       _category: category,
-      _description: description.trim() || null,
+      _description: description.trim() || "",
       _amount: amt,
       _currency_code: currencyCode,
       _rate_to_yer: rateToYer,

@@ -294,7 +294,7 @@ function CashPage() {
       const { error } = await supabase.rpc("close_cash_shift", {
         _id: openShift.id,
         _counts: counts,
-        _notes: shiftNotes.trim() || null,
+        _notes: shiftNotes.trim() || "",
       });
       if (error) {
         toast.error(`تعذر إقفال الوردية: ${error.message}`);
@@ -359,7 +359,7 @@ function CashPage() {
         _operation_id: operationId,
         _business_date: businessDate,
         _counts: counts,
-        _notes: notes.trim() || null,
+        _notes: notes.trim() || "",
       };
       if (!navigator.onLine) {
         await enqueueRpc({ id: operationId, name: "close_daily_cash_offline", args });

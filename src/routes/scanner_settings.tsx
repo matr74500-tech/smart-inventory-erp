@@ -86,7 +86,7 @@ function ScannerSettingsPage() {
       const { error } = await supabase.rpc("save_scanner_settings", {
         _page_path: s.page_path,
         _scanner_action: s.scanner_action,
-        _target_page: s.target_page || null,
+        _target_page: s.target_page || "",
         _auto_execute: s.auto_execute,
         _beep_on_scan: s.beep_on_scan,
         _vibrate_on_scan: s.vibrate_on_scan,

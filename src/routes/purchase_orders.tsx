@@ -148,7 +148,7 @@ function PurchaseOrdersPage() {
       _id: operationId,
       _supplier_id: supplierId,
       _warehouse: warehouseId,
-      _notes: notes.trim() || null,
+      _notes: notes.trim() || "",
       _items: items,
     };
     if (!navigator.onLine) {
@@ -158,10 +158,10 @@ function PurchaseOrdersPage() {
       return operationId;
     }
     const { data, error } = await supabase.rpc("save_purchase_order_draft", {
-      _id: draftId,
+      _id: draftId ?? crypto.randomUUID(),
       _supplier_id: supplierId,
       _warehouse: warehouseId,
-      _notes: notes.trim() || null,
+      _notes: notes.trim() || "",
       _items: items,
     });
     if (error) {

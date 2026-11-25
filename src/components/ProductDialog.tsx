@@ -307,7 +307,7 @@ function ProductForm({
       _name: name,
       _phone: newSupplierPhone.trim(),
       _address: "",
-      _notes: null as string | null,
+      _notes: "",
     };
     let { error } = await supabase.rpc("save_supplier_offline", args);
     if (isMissingFunction(error)) {
@@ -316,7 +316,7 @@ function ProductForm({
         _name: name,
         _phone: newSupplierPhone.trim(),
         _address: "",
-        _notes: null,
+        _notes: "",
       });
       error = legacy.error;
     }

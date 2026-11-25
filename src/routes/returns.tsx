@@ -248,14 +248,14 @@ function ReturnsPage() {
     const args = {
       _operation_id: operationId,
       _invoice_id: selected.id,
-      _customer_id: selected.customer_id ?? null,
-      _customer_name: selected.customer_name ?? null,
+      _customer_id: selected.customer_id ?? "",
+      _customer_name: selected.customer_name ?? "",
       _warehouse: selected.warehouse_id,
       _currency_code: selected.currency_code,
       _rate_to_yer: Number(selected.exchange_rate_to_yer) || 1,
       _refund_kind: refundKind,
       _payment_method: "نقدي",
-      _notes: notes.trim() ? notes.trim() : null,
+      _notes: notes.trim() ? notes.trim() : "",
       _items: includedLines.map((l) => ({
         product_id: l.productId,
         quantity: Number(l.returnQty),

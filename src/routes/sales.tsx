@@ -9,6 +9,7 @@ import {
   Printer,
   CheckCircle2,
   QrCode,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -30,6 +31,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/sales")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -209,8 +214,8 @@ function SalesPage() {
     const operationId = draftId ?? crypto.randomUUID();
     const args = {
       _id: operationId,
-      _customer_id: selectedCustomer?.id ?? null,
-      _customer_name: selectedCustomer?.name ?? null,
+      _customer_id: selectedCustomer?.id ?? "",
+      _customer_name: selectedCustomer?.name ?? "",
       _warehouse: warehouse,
       _currency_code: currency,
       _rate_to_yer: Number(currentRate),
@@ -219,7 +224,7 @@ function SalesPage() {
       _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
       _discount_yer: discountVal,
       _tax_yer: taxVal,
-      _notes: null,
+      _notes: "",
       _items: cart.map((item) => ({
         product_id: item.product.id,
         quantity: item.qty,
@@ -440,28 +445,46 @@ function SalesPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto p-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[70vh] overflow-y-auto p-2">
                 {products
                   .filter(
                     (p) =>
                       !q || p.name.includes(q) || p.code?.includes(q) || p.barcode?.includes(q),
                   )
                   .slice(0, 36)
-                  .map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => addToCart(p, 1, defaultTier)}
-                      className="rounded-xl bg-card shadow-card p-3 text-right hover:border-primary border transition-all flex flex-col justify-between h-28"
-                    >
-                      <div className="font-semibold text-sm line-clamp-2">{p.name}</div>
-                      <div className="flex justify-between items-end mt-2">
-                        <span className="text-primary font-bold">
-                          {Number(p[defaultTier] ?? p.price)} ر.ي
-                        </span>
-                        <span className="text-xs text-muted-foreground">الرصيد: {qty(p.id)}</span>
-                      </div>
-                    </button>
-                  ))}
+                  .map((p) => {
+                    const stock = qty(p.id);
+                    const lowStock = Number(p.reorder_level) > 0 && stock <= Number(p.reorder_level);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => addToCart(p, 1, defaultTier)}
+                        disabled={!stock || stock <= 0}
+                        className={cn(
+                          "rounded-xl p-3 text-right hover:border-primary border transition-all flex flex-col justify-between h-32 group",
+                          !stock || stock <= 0
+                            ? "bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50"
+                            : "bg-card shadow-sm border-border hover:bg-accent/50",
+                          lowStock && "border-amber-200 hover:border-amber-400",
+                        )}
+                      >
+                        <div className="font-semibold text-sm line-clamp-2 text-foreground">
+                          {p.name}
+                        </div>
+                        <div className="mt-auto flex justify-between items-end pt-2">
+                          <span className="text-primary font-bold text-sm">
+                            {Number(p[defaultTier] ?? p.price).toLocaleString()} ر.ي
+                          </span>
+                          <Badge
+                            variant={lowStock ? "destructive" : "secondary"}
+                            className="text-xs px-2 py-1"
+                          >
+                            {lowStock ? "ناقص" : `رصيد: ${stock}`}
+                          </Badge>
+                        </div>
+                      </button>
+                    );
+                  })}
               </div>
             </div>
 
@@ -470,18 +493,18 @@ function SalesPage() {
                 <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                   <ShoppingCart className="size-5 text-primary" /> سلة المبيعات الحالية
                 </h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto divide-y">
+                <div className="space-y-2 max-h-64 overflow-y-auto divide-y divide-border">
                   {cart.map((item, idx) => (
                     <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
-                      <div>
-                        <div className="font-medium text-sm">
-                          {item.product.name}{" "}
-                          <span className="text-xs text-muted-foreground">
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm text-foreground truncate">
+                          {item.product.name}
+                          <span className="text-xs text-muted-foreground ml-1">
                             ({PRICE_TIERS.find((t) => t.key === item.tier)?.label})
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {item.price} ر.ي × {item.qty}
+                          {item.price.toLocaleString()} ر.ي × {item.qty}
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -494,7 +517,7 @@ function SalesPage() {
                           <Minus className="size-3" />
                         </Button>
                         <Input
-                          className="w-16 h-8 text-center"
+                          className="w-16 h-8 text-center font-mono"
                           type="number"
                           min="0.01"
                           step="any"
@@ -515,7 +538,7 @@ function SalesPage() {
                         </Button>
                       </div>
                       <Input
-                        className="w-24 h-8"
+                        className="w-24 h-8 font-mono text-right"
                         type="number"
                         min="0"
                         step="any"
@@ -530,14 +553,15 @@ function SalesPage() {
                     </div>
                   ))}
                   {cart.length === 0 && (
-                    <div className="py-12 text-center text-muted-foreground text-sm">
-                      السلة فارغة — امسح صنفاً للبدء
+                    <div className="py-12 text-center text-muted-foreground text-sm flex flex-col items-center gap-2">
+                      <ShoppingCart className="size-10 opacity-30" />
+                      <p>السلة فارغة — امسح صنفاً للبدء</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-3 pt-3 border-t">
+              <div className="space-y-3 pt-3 border-t border-border">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label>المستودع</Label>
@@ -626,14 +650,15 @@ function SalesPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center text-lg font-bold pt-2 border-t">
-                  <span>الإجمالي النهائي:</span>
-                  <span className="text-primary">
+                <div className="flex justify-between items-center pt-3 border-t">
+                  <span className="text-sm text-muted-foreground">الإجمالي النهائي:</span>
+                  <span className="text-2xl font-bold text-primary font-display">
                     {finalAmount.toFixed(2)} {currentCurrency?.code ?? currency}
                   </span>
                 </div>
                 {rateMissing && (
-                  <p className="text-sm text-destructive">
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertTriangle className="size-4" />
                     لا يوجد سعر صرف صالح لهذه العملة. حدّثه من الإعدادات قبل إتمام البيع.
                   </p>
                 )}
@@ -658,14 +683,14 @@ function SalesPage() {
                     </Button>
                   )}
                   <Button
-                    className="w-full h-12 text-base font-bold"
+                    className="w-full h-12 text-base font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
                     disabled={busy || rateMissing || !cart.length || !canAction("sales.post")}
                     onClick={postCurrentSale}
                   >
                     {busy ? "جاري الحفظ والترحيل..." : "حفظ وترحيل البيع"}
                   </Button>
                 </div>
-                <div className="text-[10px] text-center text-muted-foreground leading-tight">
+                <div className="text-[10px] text-center text-muted-foreground leading-tight mt-2">
                   {storeInfo}
                 </div>
               </div>

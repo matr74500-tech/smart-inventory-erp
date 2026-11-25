@@ -97,8 +97,8 @@ function BarcodeLabelSettingsPage() {
         _shop_name: setting.shop_name,
         _product_name_field: setting.product_name_field,
         _price_source: setting.price_source,
-        _price_category: setting.price_category || null,
-        _custom_price: setting.custom_price || null,
+        _price_category: setting.price_category || "",
+        _custom_price: setting.custom_price || 0,
         _title: setting.title,
         _show_logo: setting.show_logo,
         _show_barcode_image: setting.show_barcode_image,
@@ -106,7 +106,7 @@ function BarcodeLabelSettingsPage() {
         _label_width_mm: setting.label_width_mm,
         _label_height_mm: setting.label_height_mm,
         _labels_per_page: setting.labels_per_page,
-        _printer_type: setting.printer_type || null,
+        _printer_type: setting.printer_type || "",
       });
       if (error) throw error;
       toast.success("تم حفظ إعدادات ملصقات الباركود");

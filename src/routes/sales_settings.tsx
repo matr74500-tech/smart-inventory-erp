@@ -191,7 +191,7 @@ function SalesSettingsPage() {
         _default_discount: Number(data.default_discount),
         _default_tax: Number(data.default_tax),
         _auto_print_receipt: data.auto_print_receipt,
-        _print_printer_type: data.print_printer_type || null,
+        _print_printer_type: data.print_printer_type || "",
       });
       if (error) throw error;
       toast.success(`تم حفظ إعدادات المبيعات لصفحة ${pageType}`);
@@ -240,8 +240,8 @@ function SalesSettingsPage() {
         _show_qr_code: p.show_qr_code,
         _show_barcode: p.show_barcode,
         _show_footer: p.show_footer,
-        _footer_text: p.footer_text,
-        _printer_type: p.printer_type,
+        _footer_text: p.footer_text || "",
+        _printer_type: p.printer_type || "",
         _copies: p.copies,
       });
       if (error) throw error;
