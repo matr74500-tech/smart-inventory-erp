@@ -107,16 +107,16 @@ function SuppliersPage() {
       _name: name.trim(),
       _phone: phone.trim(),
       _address: address.trim(),
-      _notes: supplierNotes.trim() || null,
+      _notes: supplierNotes.trim() || "",
     };
     let { error } = await supabase.rpc("save_supplier_offline", args);
     if (error && (error.code === "42883" || error.code === "PGRST202")) {
       const legacy = await supabase.rpc("save_supplier", {
-        _id: editingId,
+        _id: editingId ?? crypto.randomUUID(),
         _name: name.trim(),
         _phone: phone.trim(),
         _address: address.trim(),
-        _notes: supplierNotes.trim() || null,
+        _notes: supplierNotes.trim() || "",
       });
       error = legacy.error;
     }
@@ -186,7 +186,7 @@ function SuppliersPage() {
     const { error } = await supabase.rpc("save_product_supplier", {
       _product_id: productId,
       _supplier_id: supplierId,
-      _supplier_sku: supplierSku.trim() || null,
+      _supplier_sku: supplierSku.trim() || "",
       _last_cost: cost,
       _is_primary: primary,
     });
@@ -200,7 +200,7 @@ function SuppliersPage() {
             _operation_id: operationId,
             _product_id: productId,
             _supplier_id: supplierId,
-            _supplier_sku: supplierSku.trim() || null,
+      _supplier_sku: supplierSku.trim() || "",
             _last_cost: cost,
             _is_primary: primary,
           },

@@ -81,7 +81,7 @@ function ShareSettingsPage() {
         _document_type: s.document_type,
         _auto_share: s.auto_share,
         _share_methods: s.share_methods ?? [],
-        _default_message: s.default_message || null,
+        _default_message: s.default_message || "",
         _require_confirmation: s.require_confirmation,
       });
       if (error) throw error;

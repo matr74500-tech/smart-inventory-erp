@@ -172,9 +172,9 @@ function SalesRepsPage() {
     setBusy(true);
     try {
       const { error } = await supabase.rpc("save_sales_representative", {
-        _id: editingRepId,
+        _id: editingRepId ?? crypto.randomUUID(),
         _name: repName.trim(),
-        _phone: repPhone.trim() || null,
+        _phone: repPhone.trim() || "",
         _commission_rate: rate,
         _active: repActive,
       });
