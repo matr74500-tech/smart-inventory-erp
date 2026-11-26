@@ -83,6 +83,9 @@ function SalesPage() {
   const [drafts, setDrafts] = useState<SalesInvoice[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [q, setQ] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [showTierColumn, setShowTierColumn] = useState(true);
   const [warehouse, setWarehouse] = useState(() => warehouses[0]?.id || "");
   const [defaultTier, setDefaultTier] = useState<PriceKey>("price");
   const [currency, setCurrency] = useState("YER");
@@ -610,19 +613,82 @@ function SalesPage() {
                     className="pr-10 h-11 bg-card text-base"
                     placeholder="امسح الباركود أو ابحث عن الصنف بالاسم أو الكود…"
                     value={q}
-                    onChange={(e) => setQ(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQ(val);
+                      if (val.trim()) {
+                        const matches = products.filter(
+                          (p) =>
+                            p.name.includes(val) ||
+                            p.code?.includes(val) ||
+                            p.barcode?.includes(val),
+                        );
+                        setSearchResults(matches.slice(0, 8));
+                        setShowSearchDropdown(true);
+                      } else {
+                        setSearchResults([]);
+                        setShowSearchDropdown(false);
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
+                        e.preventDefault();
                         const p =
                           findByCode(products, q) || products.find((x) => x.name.includes(q));
                         if (p) {
                           addToCart(p, 1, defaultTier);
+                          setSearchResults([]);
+                          setShowSearchDropdown(false);
                         } else {
                           toast.error("الصنف غير موجود");
                         }
                       }
+                      if (e.key === "Escape") {
+                        setSearchResults([]);
+                        setShowSearchDropdown(false);
+                      }
                     }}
                   />
+                  {showSearchDropdown && searchResults.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {searchResults.map((p) => {
+                        const stock = qty(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={(ev) => {
+                              ev.preventDefault();
+                              ev.stopPropagation();
+                              addToCart(p, 1, defaultTier);
+                              setQ("");
+                              setSearchResults([]);
+                              setShowSearchDropdown(false);
+                            }}
+                            disabled={!stock || stock <= 0}
+                            className={`w-full text-left p-3 hover:bg-accent flex justify-between items-center border-b last:border-b-0 ${
+                              !stock || stock <= 0
+                                ? "text-muted-foreground cursor-not-allowed opacity-50"
+                                : "text-foreground cursor-pointer"
+                            }`}
+                          >
+                            <div>
+                              <div className="font-medium text-sm truncate">{p.name}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {p.code ?? ""} · {p.barcode ?? ""}
+                              </div>
+                            </div>
+                            {stock && stock > 0 ? (
+                              <span className="text-xs font-bold text-primary">
+                                {stock.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">نفد</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <BarcodeScanner onDetected={onScan} />
                 <Select value={defaultTier} onValueChange={(v) => setDefaultTier(v as PriceKey)}>
@@ -997,7 +1063,7 @@ function SalesPage() {
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
                     <th className="p-3 text-right">الصنف</th>
-                    <th className="p-3 text-right">الشريحة</th>
+                    {showTierColumn && <th className="p-3 text-right">الشريحة</th>}
                     <th className="p-3 text-right">السعر</th>
                     <th className="p-3 text-right">الكمية</th>
                     <th className="p-3 text-right">الإجمالي</th>
@@ -1008,9 +1074,11 @@ function SalesPage() {
                   {cart.map((item, idx) => (
                     <tr key={idx} className="hover:bg-muted/50">
                       <td className="p-3 font-medium">{item.product.name}</td>
-                      <td className="p-3 text-xs">
-                        {PRICE_TIERS.find((t) => t.key === item.tier)?.label}
-                      </td>
+                      {showTierColumn && (
+                        <td className="p-3 text-xs">
+                          {PRICE_TIERS.find((t) => t.key === item.tier)?.label}
+                        </td>
+                      )}
                       <td className="p-3">
                         <Input
                           className="w-24 h-9"
@@ -1090,6 +1158,15 @@ function SalesPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showTierColumn}
+                  onChange={(e) => setShowTierColumn(e.target.checked)}
+                  className="size-4 rounded"
+                />
+                <span>إظهار الشريحة على الفاتورة</span>
+              </div>
               <Button variant="outline" onClick={() => window.print()}>
                 <Printer className="size-4 ml-1.5" /> طباعة حرارية
               </Button>

@@ -15,6 +15,7 @@ import {
   TrendingUp,
   DollarSign,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useInventory } from "@/hooks/use-inventory";
@@ -161,6 +162,16 @@ const SHORTCUTS = [
     page: "reorders",
     icon: Truck,
     tone: "text-success",
+  },
+  {
+    key: "8",
+    label: "مصروف جديد",
+    desc: "تسجيل مصروف جديد",
+    to: "/expenses",
+    search: {},
+    page: "expenses",
+    icon: CreditCard,
+    tone: "text-destructive",
   },
 ] as const;
 

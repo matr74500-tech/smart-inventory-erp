@@ -95,7 +95,15 @@ function SystemTimezonePage() {
       toast.success("تم حفظ إعدادات التوقيت الزمني");
       void loadData();
     } catch (error) {
-      toast.error(`تعذر الحفظ: ${error instanceof Error ? error.message : String(error)}`);
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : error && typeof error === "object" && "message" in error
+              ? String((error as { message: unknown }).message)
+              : String(error);
+      toast.error(`تعذر الحفظ: ${msg}`);
     } finally {
       setBusy(false);
     }
