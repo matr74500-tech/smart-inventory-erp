@@ -82,3 +82,53 @@ export const deleteUser = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const updateOwnPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(6).max(72),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) throw new Error("لم يتم العثور على جلسة نشطة");
+    const { error } = await supabase.auth.updateUser({
+      password: data.newPassword,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const updateOwnProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        fullName: z.string().max(80).optional().default(""),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) throw new Error("لم يتم العثور على جلسة نشطة");
+    const userId = sessionData.session.user.id;
+    const username = (sessionData.session.user.user_metadata as { username?: string })?.username;
+    const { error } = await supabase
+      .from("profiles")
+      .upsert(
+        { id: userId, username: username ?? "", full_name: data.fullName || null },
+        { onConflict: "id" },
+      );
+    if (error) throw new Error(error.message);
+    const { error: metaError } = await supabase.auth.updateUser({
+      data: { full_name: data.fullName || null },
+    });
+    if (metaError) throw new Error(metaError.message);
+    return { ok: true };
+  });

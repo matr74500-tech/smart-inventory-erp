@@ -35,6 +35,7 @@ import {
   Share2,
   Clock,
   ChevronRight,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -210,6 +211,7 @@ export const NAV: {
     roles: ["storekeeper"],
     group: "الإعدادات",
   },
+  { to: "/profile", label: "ملفي الشخصي", icon: User },
   {
     to: "/backup",
     label: "النسخ الاحتياطي",
