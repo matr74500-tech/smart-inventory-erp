@@ -24,13 +24,19 @@ test.describe("Critical Flow: Login → Product → Sale → Stock", () => {
       history.pushState(null, "", "/stocktake");
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
-    await page.waitForFunction(() => {
-      return window.location.pathname === "/stocktake" && !!document.querySelector('input[placeholder*="بحث"]');
-    }, { timeout: 15000 });
+    await page.waitForFunction(
+      () => {
+        return (
+          window.location.pathname === "/stocktake" &&
+          !!document.querySelector('input[placeholder*="بحث"]')
+        );
+      },
+      { timeout: 15000 },
+    );
 
     // Select warehouse to see all products
-    await page.getByRole('combobox').first().click();
-    await page.getByRole('option').first().click();
+    await page.getByRole("combobox").first().click();
+    await page.getByRole("option").first().click();
     await page.waitForTimeout(500);
 
     // 2. Create product from stocktake page
@@ -46,7 +52,11 @@ test.describe("Critical Flow: Login → Product → Sale → Stock", () => {
     // 3. Set initial stock (stocktake)
     await page.fill('input[placeholder*="بحث"]', productName);
     await waitForTableRow(page, "الصنف", productName);
-    const productRow = page.locator(`:has-text("${productName}")`).last().locator("..").locator("..");
+    const productRow = page
+      .locator(`:has-text("${productName}")`)
+      .last()
+      .locator("..")
+      .locator("..");
     await productRow.locator('input[placeholder*="الكمية"]').fill(String(initialQty));
     await productRow.evaluate((row) => {
       const btn = row.querySelector('button[aria-label="حفظ"]');
@@ -63,15 +73,19 @@ test.describe("Critical Flow: Login → Product → Sale → Stock", () => {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
     // Select warehouse
-    await page.locator('label:has-text("المستودع")').locator("..").locator('[role="combobox"]').click();
-    await page.getByRole('option').first().click();
+    await page
+      .locator('label:has-text("المستودع")')
+      .locator("..")
+      .locator('[role="combobox"]')
+      .click();
+    await page.getByRole("option").first().click();
     await page.fill('input[placeholder*="امسح الباركود"]', barcode);
     await page.keyboard.press("Enter");
     await page.locator('input[aria-label*="كمية"]').waitFor({ state: "visible", timeout: 10000 });
 
     // Update quantity in cart and post sale
     await page.locator('input[aria-label*="كمية"]').fill(String(saleQty));
-    await page.getByRole('button', { name: 'حفظ وترحيل البيع' }).click();
+    await page.getByRole("button", { name: "حفظ وترحيل البيع" }).click();
     // Wait for sale to post (RPC may complete silently); then navigate to inventory
     await page.waitForTimeout(20000);
 
@@ -89,41 +103,44 @@ test.describe("Critical Flow: Login → Product → Sale → Stock", () => {
     await expect(row).toBeVisible();
     // Verify stock decreased from initialQty after the sale
     const remainingQty = initialQty - saleQty;
-    const cellTexts = await row.locator('td').allInnerTexts();
+    const cellTexts = await row.locator("td").allInnerTexts();
     const trimmed = cellTexts.map((t) => t.trim());
     expect(trimmed).toContain(String(remainingQty));
   });
 });
 
 test.describe("Offline Sync", () => {
-  authTest.skip("Queue operation offline, sync when online - skipped: realtime subscription timing unreliable in this environment", async ({
-    authenticatedPage,
-  }) => {
-    const page = authenticatedPage;
+  authTest.skip(
+    "Queue operation offline, sync when online - skipped: realtime subscription timing unreliable in this environment",
+    async ({ authenticatedPage }) => {
+      const page = authenticatedPage;
 
-    // Navigate to inventory
-    await page.evaluate(() => {
-      history.pushState(null, "", "/inventory");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
-    await page.waitForFunction(() => window.location.pathname === "/inventory", { timeout: 15000 });
-    await page.waitForLoadState("networkidle");
+      // Navigate to inventory
+      await page.evaluate(() => {
+        history.pushState(null, "", "/inventory");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      await page.waitForFunction(() => window.location.pathname === "/inventory", {
+        timeout: 15000,
+      });
+      await page.waitForLoadState("networkidle");
 
-    // Add product
-    await page.getByRole('button', { name: 'صنف جديد' }).click();
-    await page.waitForTimeout(1000);
-    await page.fill('input[name="name"]', "Offline Product");
-    await page.fill('input.pr-10', "OFFLINE123");
-    await page.fill('input[name="cost"]', "5");
-    await page.fill('input[name="price"]', "15");
-    await clickButton(page, "حفظ");
-    await waitForToast(page, "تمت إضافة الصنف");
-    await page.waitForTimeout(3000);
+      // Add product
+      await page.getByRole("button", { name: "صنف جديد" }).click();
+      await page.waitForTimeout(1000);
+      await page.fill('input[name="name"]', "Offline Product");
+      await page.fill("input.pr-10", "OFFLINE123");
+      await page.fill('input[name="cost"]', "5");
+      await page.fill('input[name="price"]', "15");
+      await clickButton(page, "حفظ");
+      await waitForToast(page, "تمت إضافة الصنف");
+      await page.waitForTimeout(3000);
 
-    // Verify product exists
-    await page.fill('input[placeholder*="ابحث بالاسم"]', "Offline Product");
-    await waitForTableRow(page, "الصنف", "Offline Product");
-  });
+      // Verify product exists
+      await page.fill('input[placeholder*="ابحث بالاسم"]', "Offline Product");
+      await waitForTableRow(page, "الصنف", "Offline Product");
+    },
+  );
 });
 
 test.describe("Permissions", () => {

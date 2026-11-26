@@ -13,7 +13,7 @@ export async function navigateTo(page: Page, path: string) {
 export async function fillInput(page: Page, label: string, value: string) {
   const container = page.locator(`label:has-text("${label}")`).locator("..");
   const select = container.locator("select").first();
-  if (await select.count() > 0) {
+  if ((await select.count()) > 0) {
     await select.selectOption(value);
   } else {
     await container.locator("input, textarea").first().fill(value);
@@ -27,7 +27,9 @@ export async function selectOption(page: Page, label: string, value: string) {
 
 export async function clickButton(page: Page, text: string) {
   await page.evaluate((t) => {
-    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.trim() === t);
+    const btn = Array.from(document.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === t,
+    );
     if (btn) (btn as HTMLButtonElement).click();
   }, text);
 }
