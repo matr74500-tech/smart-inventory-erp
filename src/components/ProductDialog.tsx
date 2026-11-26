@@ -566,14 +566,28 @@ function ProductForm({
           _product: productId,
           _units: unitsPayload,
         });
-        if (error && !isMissingFunction(error)) return `تعذر حفظ الوحدات: ${error.message}`;
+        if (error && !isMissingFunction(error)) {
+          const msg = error.message ?? String(error);
+          if (/isnot unique|already exists|23505|duplicate/i.test(msg)) {
+            console.warn("Product units already exist, skipping:", msg);
+          } else {
+            return `تعذر حفظ الوحدات: ${msg}`;
+          }
+        }
       }
       if (shouldSaveSuppliers) {
         const { error } = await supabase.rpc("save_product_suppliers", {
           _product: productId,
           _items: supplierPayload,
         });
-        if (error && !isMissingFunction(error)) return `تعذر ربط الموردين: ${error.message}`;
+        if (error && !isMissingFunction(error)) {
+          const msg = error.message ?? String(error);
+          if (/isnot unique|already exists|23505|duplicate/i.test(msg)) {
+            console.warn("Product suppliers already exist, skipping:", msg);
+          } else {
+            return `تعذر ربط الموردين: ${msg}`;
+          }
+        }
       }
       return null;
     };

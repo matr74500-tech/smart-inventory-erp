@@ -276,6 +276,11 @@ function SalesPage() {
     try {
       const { data, error } = await supabase.rpc("save_sale_draft" as never, args as never);
       if (error) {
+        // إذا كانت الفاتورة已 posts (ليست مسودة)، نفترض draftId غير صالح ونحاول بمعرف جديد
+        if (/لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(error.message) && draftId) {
+          setDraftId(null);
+          return saveDraft();
+        }
         if (/network|fetch|offline|failed/i.test(error.message)) {
           await enqueueRpc({
             id: operationId,
@@ -302,6 +307,16 @@ function SalesPage() {
         setDraftId(operationId);
         toast.success("انقطع الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
         return operationId;
+      }
+      // إذا كانت الفاتورة已 posts، نفترض draftId غير صالح ونحاول بمعرف جديد
+      if (
+        /لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(
+          error instanceof Error ? error.message : String(error),
+        ) &&
+        draftId
+      ) {
+        setDraftId(null);
+        return saveDraft();
       }
       toast.error(
         `تعذر الاتصال لحفظ المسودة: ${error instanceof Error ? error.message : String(error)}`,
