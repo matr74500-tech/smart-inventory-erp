@@ -47,7 +47,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const Route = createFileRoute("/customers")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -709,7 +716,10 @@ function CustomersPage() {
                 const overLimit = c.customer_type === "credit" && c.balance > c.credit_limit;
                 const inactive = isInactiveCustomer(c, inactivityDays);
                 return (
-                  <Card key={c.id} className="rounded-xl shadow-sm border hover:shadow-md transition-all group">
+                  <Card
+                    key={c.id}
+                    className="rounded-xl shadow-sm border hover:shadow-md transition-all group"
+                  >
                     <CardHeader className="px-4 py-3">
                       <div className="flex justify-between items-start">
                         <div className="min-w-0">
@@ -719,9 +729,7 @@ function CustomersPage() {
                           </div>
                         </div>
                         <Badge
-                          variant={
-                            overLimit ? "destructive" : inactive ? "secondary" : "secondary"
-                          }
+                          variant={overLimit ? "destructive" : inactive ? "secondary" : "secondary"}
                           className="text-xs px-2 py-1 shrink-0"
                         >
                           {overLimit ? "متجاوز الحد" : inactive ? "غير نشط" : `رصيد: ${c.balance}`}
@@ -841,16 +849,20 @@ function CustomersPage() {
                       متجاوزو سقف المديونية
                     </CardDescription>
                     <div className="text-3xl font-bold text-orange-900">
-                      {customers.filter(
-                        (c) => c.customer_type === "credit" && c.balance > c.credit_limit,
-                      ).length}
+                      {
+                        customers.filter(
+                          (c) => c.customer_type === "credit" && c.balance > c.credit_limit,
+                        ).length
+                      }
                     </div>
                   </Card>
                   <Card className="p-4 rounded-lg bg-rose-50 border border-rose-100">
                     <CardDescription className="text-xs text-rose-600 font-medium mb-1">
                       عملاء غير نشطين
                     </CardDescription>
-                    <div className="text-3xl font-bold text-rose-900">{inactiveCustomers.length}</div>
+                    <div className="text-3xl font-bold text-rose-900">
+                      {inactiveCustomers.length}
+                    </div>
                   </Card>
                 </div>
                 {inactivityDays === null && (
@@ -924,7 +936,9 @@ function CustomersPage() {
                           <div className="text-xs text-muted-foreground">{v.method}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold">{v.amount} {v.currency}</div>
+                          <div className="font-bold">
+                            {v.amount} {v.currency}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(v.at).toLocaleString("ar")}
                           </div>
@@ -1034,7 +1048,9 @@ function CustomersPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>إضافة عميل جديد</DialogTitle>
-            <DialogDescription>أضف بيانات العميل الأساسية ورقم الهاتف وسقف المديونية.</DialogDescription>
+            <DialogDescription>
+              أضف بيانات العميل الأساسية ورقم الهاتف وسقف المديونية.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveCustomer} className="space-y-4 p-4">
             <div className="space-y-1">
@@ -1112,7 +1128,9 @@ function CustomersPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>سند قبض / صرف جديد</DialogTitle>
-            <DialogDescription>سند مالية لتسجيل القبض أو الصرف وترحيل رصيد العميل.</DialogDescription>
+            <DialogDescription>
+              سند مالية لتسجيل القبض أو الصرف وترحيل رصيد العميل.
+            </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(event) => {
@@ -1134,9 +1152,7 @@ function CustomersPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>
-                العميل {vType === "payment" ? "(اختياري للمصروفات)" : "*"}
-              </Label>
+              <Label>العميل {vType === "payment" ? "(اختياري للمصروفات)" : "*"}</Label>
               <Select
                 value={vCustId || "__none__"}
                 onValueChange={(value) => setVCustId(value === "__none__" ? "" : value)}
@@ -1249,7 +1265,9 @@ function CustomersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1332,8 +1350,7 @@ function CustomersPage() {
                         className="p-3 flex justify-between items-center hover:bg-muted/50 transition-colors"
                       >
                         <span>
-                          {v.type === "receipt" ? "سند قبض" : "سند صرف"} (
-                          {v.notes || v.method})
+                          {v.type === "receipt" ? "سند قبض" : "سند صرف"} ({v.notes || v.method})
                         </span>
                         <span
                           className={

@@ -33,3 +33,7 @@ dist-ssr
 *.sw?
 supabase/.temp/
 test-results/
+.aider*
+.env
+.env
+.env
