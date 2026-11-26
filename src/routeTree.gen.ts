@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as Account_statementsRouteImport } from './routes/account_statements'
 import { Route as Activity_logRouteImport } from './routes/activity_log'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as BackupRouteImport } from './routes/backup'
@@ -25,6 +26,7 @@ import { Route as LabelsRouteImport } from './routes/labels'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MovementsRouteImport } from './routes/movements'
 import { Route as PricesRouteImport } from './routes/prices'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as Purchase_ordersRouteImport } from './routes/purchase_orders'
 import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ReordersRouteImport } from './routes/reorders'
@@ -42,12 +44,15 @@ import { Route as System_timezoneRouteImport } from './routes/system_timezone'
 import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as Ui_themeRouteImport } from './routes/ui_theme'
 import { Route as UsersRouteImport } from './routes/users'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as Account_statementsRouteImport } from './routes/account_statements'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Account_statementsRoute = Account_statementsRouteImport.update({
+  id: '/account_statements',
+  path: '/account_statements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Activity_logRoute = Activity_logRouteImport.update({
@@ -123,6 +128,11 @@ const MovementsRoute = MovementsRouteImport.update({
 const PricesRoute = PricesRouteImport.update({
   id: '/prices',
   path: '/prices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Purchase_ordersRoute = Purchase_ordersRouteImport.update({
@@ -211,19 +221,9 @@ const UsersRoute = UsersRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Account_statementsRoute = Account_statementsRouteImport.update({
-  id: '/account_statements',
-  path: '/account_statements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account_statements': typeof Account_statementsRoute
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
@@ -260,6 +260,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account_statements': typeof Account_statementsRoute
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
@@ -297,6 +298,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account_statements': typeof Account_statementsRoute
   '/activity_log': typeof Activity_logRoute
   '/alerts': typeof AlertsRoute
   '/backup': typeof BackupRoute
@@ -335,6 +337,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account_statements'
     | '/activity_log'
     | '/alerts'
     | '/backup'
@@ -351,7 +354,6 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
-    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -372,6 +374,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account_statements'
     | '/activity_log'
     | '/alerts'
     | '/backup'
@@ -388,7 +391,6 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
-    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -409,6 +411,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account_statements'
     | '/activity_log'
     | '/alerts'
     | '/backup'
@@ -425,7 +428,6 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
-    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -447,6 +449,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  Account_statementsRoute: typeof Account_statementsRoute
   Activity_logRoute: typeof Activity_logRoute
   AlertsRoute: typeof AlertsRoute
   BackupRoute: typeof BackupRoute
@@ -462,6 +465,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MovementsRoute: typeof MovementsRoute
   PricesRoute: typeof PricesRoute
+  ProfileRoute: typeof ProfileRoute
   Purchase_ordersRoute: typeof Purchase_ordersRoute
   PurchasesRoute: typeof PurchasesRoute
   ReordersRoute: typeof ReordersRoute
@@ -479,8 +483,6 @@ export interface RootRouteChildren {
   TransfersRoute: typeof TransfersRoute
   Ui_themeRoute: typeof Ui_themeRoute
   UsersRoute: typeof UsersRoute
-  ProfileRoute: typeof ProfileRoute
-  Account_statementsRoute: typeof Account_statementsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -490,6 +492,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_statements': {
+      id: '/account_statements'
+      path: '/account_statements'
+      fullPath: '/account_statements'
+      preLoaderRoute: typeof Account_statementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/activity_log': {
@@ -723,25 +732,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account_statements': {
-      id: '/account_statements'
-      path: '/account_statements'
-      fullPath: '/account_statements'
-      preLoaderRoute: typeof Account_statementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  Account_statementsRoute: Account_statementsRoute,
   Activity_logRoute: Activity_logRoute,
   AlertsRoute: AlertsRoute,
   BackupRoute: BackupRoute,
@@ -757,6 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MovementsRoute: MovementsRoute,
   PricesRoute: PricesRoute,
+  ProfileRoute: ProfileRoute,
   Purchase_ordersRoute: Purchase_ordersRoute,
   PurchasesRoute: PurchasesRoute,
   ReordersRoute: ReordersRoute,
@@ -774,7 +771,6 @@ const rootRouteChildren: RootRouteChildren = {
   TransfersRoute: TransfersRoute,
   Ui_themeRoute: Ui_themeRoute,
   UsersRoute: UsersRoute,
-  ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
