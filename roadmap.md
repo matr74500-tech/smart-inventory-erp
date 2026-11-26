@@ -1,4 +1,5 @@
 # Employee permissions
+
 - [x] Continue directly; run only targeted permission checks.
 - [x] Persist and enforce per-user page, action and field permissions.
 - [x] Add user-specific permission editor and integrate screens.
