@@ -109,6 +109,8 @@ function SalesPage() {
   const [tax, setTax] = useState("0");
   const [busy, setBusy] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const savingRef = useRef(false);
+  const postingRef = useRef(false);
 
   const paymentMethods = (settings?.payment_methods as string[]) ?? [
     "نقدي YER",
@@ -232,96 +234,108 @@ function SalesPage() {
       toast.error("ليس لديك صلاحية حفظ مسودة بيع");
       return null;
     }
-    if (!cart.length) {
-      toast.error("السلة فارغة");
+    if (savingRef.current) {
+      toast.error("عملية حفظ قيد التنفيذ، يرجى الانتظار");
       return null;
     }
-    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
-      toast.error("الرجاء اختيار المستودع");
-      return null;
-    }
-    if (rateMissing) {
-      toast.error("لا يوجد سعر صرف صالح لهذه العملة");
-      return null;
-    }
-
-    const selectedCustomer = customers.find((item) => item.id === customerId);
-    const operationId = draftId ?? crypto.randomUUID();
-    const args = {
-      _id: operationId,
-      _customer_id: selectedCustomer?.id?.trim() || null,
-      _customer_name: selectedCustomer?.name ?? "",
-      _warehouse: warehouse?.trim() || null,
-      _currency_code: currency,
-      _rate_to_yer: Number(currentRate),
-      _payment_method: paymentMethod,
-      _affects_drawer: paymentMethod.includes("نقدي") || paymentMethod.startsWith("سعودي"),
-      _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
-      _discount_yer: discountVal,
-      _tax_yer: taxVal,
-      _notes: "",
-      _items: cart.map((item) => ({
-        product_id: item.product.id,
-        quantity: item.qty,
-        unit_price_yer: item.price,
-        price_tier: item.tier,
-      })),
-    };
-    if (!navigator.onLine) {
-      await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args: args as never });
-      setDraftId(operationId);
-      toast.success("تم حفظ مسودة البيع محليًا وستتم مزامنتها عند عودة الاتصال");
-      return operationId;
-    }
+    savingRef.current = true;
     try {
-      const { data, error } = await supabase.rpc("save_sale_draft" as never, args as never);
-      if (error) {
-        // إذا كانت الفاتورة已 posts (ليست مسودة)، نفترض draftId غير صالح ونحاول بمعرف جديد
-        if (/لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(error.message) && draftId) {
-          setDraftId(null);
-          return saveDraft();
+      if (!cart.length) {
+        toast.error("السلة فارغة");
+        return null;
+      }
+      if (!warehouse || warehouse === "undefined" || warehouse === "null") {
+        toast.error("الرجاء اختيار المستودع");
+        return null;
+      }
+      if (rateMissing) {
+        toast.error("لا يوجد سعر صرف صالح لهذه العملة");
+        return null;
+      }
+
+      const selectedCustomer = customers.find((item) => item.id === customerId);
+      const operationId = draftId ?? crypto.randomUUID();
+      const args = {
+        _id: operationId,
+        _customer_id: selectedCustomer?.id?.trim() || null,
+        _customer_name: selectedCustomer?.name ?? "",
+        _warehouse: warehouse?.trim() || null,
+        _currency_code: currency,
+        _rate_to_yer: Number(currentRate),
+        _payment_method: paymentMethod,
+        _affects_drawer: paymentMethod.includes("نقدي") || paymentMethod.startsWith("سعودي"),
+        _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
+        _discount_yer: discountVal,
+        _tax_yer: taxVal,
+        _notes: "",
+        _items: cart.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.qty,
+          unit_price_yer: item.price,
+          price_tier: item.tier,
+        })),
+      };
+      if (!navigator.onLine) {
+        await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args: args as never });
+        setDraftId(operationId);
+        toast.success("تم حفظ مسودة البيع محليًا وستتم مزامنتها عند عودة الاتصال");
+        return operationId;
+      }
+      try {
+        const { data, error } = await supabase.rpc("save_sale_draft" as never, args as never);
+        if (error) {
+          // إذا كانت الفاتورة已 posts (ليست مسودة)، نفترض draftId غير صالح ونحاول بمعرف جديد
+          if (
+            /لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(error.message) &&
+            draftId
+          ) {
+            setDraftId(null);
+            return saveDraft();
+          }
+          if (/network|fetch|offline|failed/i.test(error.message)) {
+            await enqueueRpc({
+              id: operationId,
+              name: "save_sale_draft_offline",
+              args: args as never,
+            });
+            setDraftId(operationId);
+            toast.success("تعذر الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
+            return operationId;
+          }
+          toast.error(`تعذر حفظ المسودة: ${error.message}`);
+          return null;
         }
-        if (/network|fetch|offline|failed/i.test(error.message)) {
+        setDraftId(data);
+        void refreshDrafts();
+        return data;
+      } catch (error) {
+        if (isTransientNetworkError(error)) {
           await enqueueRpc({
             id: operationId,
             name: "save_sale_draft_offline",
             args: args as never,
           });
           setDraftId(operationId);
-          toast.success("تعذر الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
+          toast.success("انقطع الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
           return operationId;
         }
-        toast.error(`تعذر حفظ المسودة: ${error.message}`);
+        // إذا كانت الفاتورة已 posts، نفترض draftId غير صالح ونحاول بمعرف جديد
+        if (
+          /لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(
+            error instanceof Error ? error.message : String(error),
+          ) &&
+          draftId
+        ) {
+          setDraftId(null);
+          return saveDraft();
+        }
+        toast.error(
+          `تعذر الاتصال لحفظ المسودة: ${error instanceof Error ? error.message : String(error)}`,
+        );
         return null;
       }
-      setDraftId(data);
-      void refreshDrafts();
-      return data;
-    } catch (error) {
-      if (isTransientNetworkError(error)) {
-        await enqueueRpc({
-          id: operationId,
-          name: "save_sale_draft_offline",
-          args: args as never,
-        });
-        setDraftId(operationId);
-        toast.success("انقطع الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
-        return operationId;
-      }
-      // إذا كانت الفاتورة已 posts، نفترض draftId غير صالح ونحاول بمعرف جديد
-      if (
-        /لا يمكن تعديل|غير مسودة|not a draft|already posted/i.test(
-          error instanceof Error ? error.message : String(error),
-        ) &&
-        draftId
-      ) {
-        setDraftId(null);
-        return saveDraft();
-      }
-      toast.error(
-        `تعذر الاتصال لحفظ المسودة: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return null;
+    } finally {
+      savingRef.current = false;
     }
   }
 
@@ -330,40 +344,49 @@ function SalesPage() {
       toast.error("ليس لديك صلاحية ترحيل فاتورة البيع");
       return;
     }
-    const operationId = crypto.randomUUID();
-    const args = { _operation_id: operationId, _id: id };
+    if (postingRef.current) {
+      toast.error("عملية ترحيل قيد التنفيذ، يرجى الانتظار");
+      return;
+    }
+    postingRef.current = true;
     try {
-      if (!navigator.onLine) {
-        await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
-        toast.success("تم حفظ طلب ترحيل الفاتورة محليًا للمزامنة");
-        return;
-      }
-      const { error } = await supabase.rpc("post_sale_offline", args);
-      if (error) {
-        if (/network|fetch|offline|failed/i.test(error.message)) {
+      const operationId = crypto.randomUUID();
+      const args = { _operation_id: operationId, _id: id };
+      try {
+        if (!navigator.onLine) {
           await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
-          toast.success("تعذر الاتصال؛ حُفظ طلب الترحيل للمزامنة");
+          toast.success("تم حفظ طلب ترحيل الفاتورة محليًا للمزامنة");
           return;
         }
-        toast.error(`تعذر ترحيل الفاتورة؛ حُفظت كمسودة: ${error.message}`);
-        return;
+        const { error } = await supabase.rpc("post_sale_offline", args);
+        if (error) {
+          if (/network|fetch|offline|failed/i.test(error.message)) {
+            await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
+            toast.success("تعذر الاتصال؛ حُفظ طلب الترحيل للمزامنة");
+            return;
+          }
+          toast.error(`تعذر ترحيل الفاتورة؛ حُفظت كمسودة: ${error.message}`);
+          return;
+        }
+        toast.success("تم ترحيل الفاتورة وتحديث المخزون والصندوق");
+        setDraftId(null);
+        void refreshDrafts();
+        setCart([]);
+        setDiscount("0");
+        setTax("0");
+        reload();
+      } catch (error) {
+        if (isTransientNetworkError(error)) {
+          await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
+          toast.success("انقطع الاتصال؛ حُفظ طلب الترحيل للمزامنة");
+          return;
+        }
+        toast.error(
+          `تعذر الاتصال لترحيل الفاتورة؛ بقيت مسودة: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
-      toast.success("تم ترحيل الفاتورة وتحديث المخزون والصندوق");
-      setDraftId(null);
-      void refreshDrafts();
-      setCart([]);
-      setDiscount("0");
-      setTax("0");
-      reload();
-    } catch (error) {
-      if (isTransientNetworkError(error)) {
-        await enqueueRpc({ id: operationId, name: "post_sale_offline", args });
-        toast.success("انقطع الاتصال؛ حُفظ طلب الترحيل للمزامنة");
-        return;
-      }
-      toast.error(
-        `تعذر الاتصال لترحيل الفاتورة؛ بقيت مسودة: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    } finally {
+      postingRef.current = false;
     }
   }
 
@@ -590,6 +613,67 @@ function SalesPage() {
 
   const storeInfo =
     "مكتبة ومحلات الإخوة - ذمار، جولة رداع، سوق عنس، أمام فندق الأهرام، ت: 777758043 - 771508085";
+
+  // Auto-save draft to localStorage on every change, restore on mount
+  useEffect(() => {
+    const key = "sales_draft_v1";
+    const save = () => {
+      try {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            cart,
+            customerId,
+            warehouse,
+            currency,
+            paymentMethod,
+            discount,
+            tax,
+          }),
+        );
+      } catch {
+        // ignore storage errors
+      }
+    };
+    save();
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      save();
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    const handlePageHide = () => save();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") save();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Restore on mount
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.cart?.length) setCart(saved.cart);
+        if (saved.customerId) setCustomerId(saved.customerId);
+        if (saved.warehouse) setWarehouse(saved.warehouse);
+        if (saved.currency) setCurrency(saved.currency);
+        if (saved.paymentMethod) setPaymentMethod(saved.paymentMethod);
+        if (saved.discount !== undefined) setDiscount(String(saved.discount));
+        if (saved.tax !== undefined) setTax(String(saved.tax));
+      }
+    } catch {
+      // ignore restore errors
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [cart, customerId, warehouse, currency, paymentMethod, discount, tax]);
 
   return (
     <AppShell title="وحدة المبيعات والفواتير (POS & NewInvoice)">
