@@ -25,6 +25,10 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: (table: string) => ({
       select: () => ({
         eq: () => ({
+          data:
+            table === "offline_rpc_allowlist"
+              ? [...allowedRpcNames].map((rpc_name) => ({ rpc_name }))
+              : null,
           maybeSingle: async () => ({ data: table === "products" ? serverProduct : null }),
           single: async () => ({
             data:
