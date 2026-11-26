@@ -5,6 +5,13 @@ import { wipeInventoryCache } from "@/lib/offline/inventory-cache";
 
 // --- Supabase fake (record calls, control session + server state) ---
 const rpcCalls: Array<{ name: string; args: unknown }> = [];
+const allowedRpcNames = new Set([
+  "post_sale_offline",
+  "save_product_offline",
+  "set_stock_offline",
+  "set_stock_batch_offline",
+  "transfer_shelf_stock_offline",
+]);
 let sessionUserId: string | null = null;
 let serverProduct: Record<string, unknown> | null = null;
 
@@ -19,8 +26,15 @@ vi.mock("@/integrations/supabase/client", () => ({
       select: () => ({
         eq: () => ({
           maybeSingle: async () => ({ data: table === "products" ? serverProduct : null }),
+          single: async () => ({
+            data:
+              table === "offline_rpc_allowlist"
+                ? [...allowedRpcNames].map((rpc_name) => ({ rpc_name }))
+                : null,
+          }),
         }),
       }),
+      upsert: async () => ({}),
     }),
     rpc: async (name: string, args: unknown) => {
       rpcCalls.push({ name, args });
