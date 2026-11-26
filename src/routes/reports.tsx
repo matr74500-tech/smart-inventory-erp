@@ -6,7 +6,9 @@ import { AppShell } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { useInventory } from "@/hooks/use-inventory";
+import { writeSheet } from "@/lib/inventory-utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/reports")({
@@ -19,6 +21,7 @@ type Movement = Tables<"stock_movements">;
 type CashTransaction = Tables<"cash_transactions">;
 
 function ReportsPage() {
+  const { canAction } = useAuth();
   const { products } = useInventory();
   const [businessDate, setBusinessDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -112,6 +115,46 @@ function ReportsPage() {
     [products],
   );
 
+  const exportInvoices = () =>
+    void writeSheet(
+      invoices.map((invoice) => ({
+        "#": invoice.number,
+        العميل: invoice.customer_name ?? "",
+        الحالة: invoice.status,
+        "الإجمالي (ر.ي)": Number(invoice.total_yer),
+        المدفوع: Number(invoice.paid_amount),
+        العملة: invoice.currency_code,
+        "سعر الصرف": Number(invoice.exchange_rate_to_yer),
+        "تاريخ الإنشاء": invoice.posted_at,
+        "طريقة الدفع": invoice.payment_method,
+      })),
+      `تقرير-فواتير-${businessDate}.xlsx`,
+    );
+
+  const exportMovements = () =>
+    void writeSheet(
+      movements.map((movement) => ({
+        المنتج: productNames.get(movement.product_id) ?? movement.product_id,
+        النوع: movement.kind,
+        الكمية: Number(movement.quantity),
+        التاريخ: movement.created_at,
+        ملاحظات: movement.note ?? "",
+      })),
+      `تقرير-حركة-${businessDate}.xlsx`,
+    );
+
+  const exportCash = () =>
+    void writeSheet(
+      cashTransactions.map((transaction) => ({
+        التاريخ: transaction.created_at,
+        المبلغ: Number(transaction.amount),
+        العملة: transaction.currency_code,
+        "سعر الصرف": Number(transaction.rate_to_yer),
+        "تأثير درج الريال": transaction.affects_drawer,
+      })),
+      `تقرير-نقدي-${businessDate}.xlsx`,
+    );
+
   return (
     <AppShell title="تقارير المبيعات والحركة اليومية">
       <div className="space-y-5">
@@ -139,10 +182,48 @@ function ReportsPage() {
               <strong className="text-xl">{totals.drawerYer.toFixed(2)}</strong>
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2 no-print">
+            <button
+              type="button"
+              className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
+              onClick={exportCash}
+              disabled={!canAction("reports.view")}
+            >
+              تصدير Excel
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-2 text-sm font-bold"
+              onClick={() => window.print()}
+              disabled={!canAction("reports.view")}
+            >
+              طباعة PDF
+            </button>
+          </div>
         </section>
 
         <section className="rounded-xl bg-card shadow-card">
-          <h2 className="border-b p-4 font-bold">فواتير البيع المرحلة ({invoices.length})</h2>
+          <div className="flex items-center justify-between gap-3 border-b p-4 font-bold">
+            <h2 className="font-bold">فواتير البيع المرحلة ({invoices.length})</h2>
+            <div className="flex gap-2 no-print">
+              <button
+                type="button"
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
+                onClick={exportInvoices}
+                disabled={!canAction("reports.view")}
+              >
+                تصدير Excel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-2 text-sm font-bold"
+                onClick={() => window.print()}
+                disabled={!canAction("reports.view")}
+              >
+                طباعة PDF
+              </button>
+            </div>
+          </div>
           {loading ? (
             <p className="p-8 text-center text-muted-foreground">جارٍ تحميل التقرير…</p>
           ) : (
@@ -173,7 +254,27 @@ function ReportsPage() {
         </section>
 
         <section className="rounded-xl bg-card shadow-card">
-          <h2 className="border-b p-4 font-bold">الحركة اليومية للمخزون ({movements.length})</h2>
+          <div className="flex items-center justify-between gap-3 border-b p-4 font-bold">
+            <h2 className="font-bold">الحركة اليومية للمخزون ({movements.length})</h2>
+            <div className="flex gap-2 no-print">
+              <button
+                type="button"
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-primary-foreground"
+                onClick={exportMovements}
+                disabled={!canAction("reports.view")}
+              >
+                تصدير Excel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-2 text-sm font-bold"
+                onClick={() => window.print()}
+                disabled={!canAction("reports.view")}
+              >
+                طباعة PDF
+              </button>
+            </div>
+          </div>
           <div className="divide-y">
             {movements.map((movement) => (
               <div key={movement.id} className="flex flex-wrap justify-between gap-2 p-4 text-sm">

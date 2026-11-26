@@ -48,6 +48,18 @@ function SettingsPage() {
   const { can, canAction } = useAuth();
   return (
     <AppShell title="الإعدادات" roles={["storekeeper"]}>
+      {inv.cacheError ? (
+        <div className="mb-4 rounded-xl border border-destructive bg-destructive/5 p-4 text-sm text-destructive shadow-card">
+          تعذر تحميل بيانات المخزون من الكاش المحلي. سيتم استعادة البيانات من الخادم عند توفر
+          الاتصال.
+        </div>
+      ) : (
+        <div className="mb-4 rounded-xl bg-card p-4 text-sm text-muted-foreground shadow-card">
+          {inv.loading
+            ? "جارٍ تحميل بيانات المخزون من الكاش أو الخادم."
+            : "تمت مزامنة أو استرجاع بيانات المخزون عبر مسار الكاش والمزامنة الحالي."}
+        </div>
+      )}
       <fieldset disabled={!canAction("settings.manage")}>
         <Tabs defaultValue="categories" dir="rtl">
           <TabsList className="flex-wrap h-auto">
