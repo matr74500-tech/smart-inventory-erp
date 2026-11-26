@@ -73,6 +73,7 @@ function InventoryPage() {
   const [q, setQ] = useState(search.q ?? "");
   const [cat, setCat] = useState(ALL);
   const [wh, setWh] = useState(ALL);
+  const [missingOnly, setMissingOnly] = useState(false);
   const [dialog, setDialog] = useState<{
     open: boolean;
     product?: Product | null;
@@ -81,10 +82,18 @@ function InventoryPage() {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const missingCount = products.filter(
+    (p) => !p.barcode || !p.cost || !p.price || !p.category_id || !p.supplier,
+  ).length;
+
+  const hasMissingData = (p: Product) =>
+    !p.barcode || !p.cost || !p.price || !p.category_id || !p.supplier;
+
   const filtered = useMemo(
     () =>
       products.filter(
         (p) =>
+          (!missingOnly || hasMissingData(p)) &&
           (cat === ALL || p.category_id === cat) &&
           (wh === ALL || qty(p.id, wh) > 0 || p.warehouse_id === wh) &&
           matchesSearch(
@@ -92,7 +101,7 @@ function InventoryPage() {
             q,
           ),
       ),
-    [products, q, cat, wh, qty],
+    [products, q, cat, wh, missingOnly],
   );
 
   const lowCount = filtered.filter(
@@ -322,6 +331,17 @@ function InventoryPage() {
               {lowCount} صنف تحت حد الطلب
             </Badge>
           )}
+          {missingCount > 0 && (
+            <Button
+              variant={missingOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMissingOnly(!missingOnly)}
+              className="flex items-center gap-1 px-3 py-2 text-sm border-amber-200 bg-amber-50/50 text-amber-800 hover:bg-amber-100"
+            >
+              <AlertTriangle className="size-4" />
+              {missingCount} صنف ناقص البيانات
+            </Button>
+          )}
         </div>
 
         {/* Inventory table */}
@@ -400,6 +420,15 @@ function InventoryPage() {
                               <div className="font-medium text-foreground truncate">{p.name}</div>
                             )}
                             {canField("expiry_date") && <ExpiryBadge date={p.expiry_date} />}
+                            {hasMissingData(p) && (
+                              <Badge
+                                variant="outline"
+                                className="ml-1 text-xs border-amber-400 text-amber-600 bg-amber-50/50"
+                                title="بيانات ناقصة"
+                              >
+                                ناقص
+                              </Badge>
+                            )}
                             <div className="text-xs text-muted-foreground mt-0.5">
                               {p.unit}
                               {p.major_unit

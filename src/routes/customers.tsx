@@ -86,6 +86,7 @@ type Customer = {
   customer_type: "cash" | "credit" | "wholesale";
   credit_limit: number;
   balance: number;
+  code?: string;
   created_at: string;
   last_sale_at?: string | null;
   inactive_alert_enabled?: boolean;
@@ -134,6 +135,7 @@ function mapCustomer(row: Tables<"customers">): Customer {
     customer_type: row.customer_type as Customer["customer_type"],
     credit_limit: row.credit_limit_yer,
     balance: row.balance_yer,
+    code: row.code ?? undefined,
     created_at: row.created_at,
     last_sale_at: row.last_sale_at,
     inactive_alert_enabled: row.inactive_alert_enabled,
@@ -186,6 +188,7 @@ function CustomersPage() {
 
   // Customer Form state
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
   const [secPhone, setSecPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -331,6 +334,7 @@ function CustomersPage() {
       _operation_id: operationId,
       _id: customerId,
       _name: name.trim(),
+      _code: code.trim() || null,
       _phone: phone.trim(),
       _secondary_phone: secPhone.trim() || "",
       _address: address.trim(),
@@ -342,6 +346,7 @@ function CustomersPage() {
       id: customerId,
       name: name.trim(),
       phone: phone.trim(),
+      ...(code.trim() ? { code: code.trim() } : {}),
       ...(secPhone.trim() ? { secondary_phone: secPhone.trim() } : {}),
       address: address.trim(),
       customer_type: type,
@@ -673,7 +678,10 @@ function CustomersPage() {
     () =>
       customers.filter(
         (c) =>
-          (c.name.includes(q) || c.phone.includes(q) || c.address.includes(q)) &&
+          (c.name.includes(q) ||
+            c.phone.includes(q) ||
+            c.address.includes(q) ||
+            (c.code && c.code.includes(q))) &&
           (!inactiveOnly || isInactiveCustomer(c, inactivityDays)),
       ),
     [customers, q, inactiveOnly, inactivityDays],
@@ -760,7 +768,7 @@ function CustomersPage() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   className="pr-10 h-10 bg-card"
-                  placeholder="ابحث باسم العميل أو رقم الهاتف أو العنوان…"
+                  placeholder="ابحث باسم العميل أو رقم الهاتف أو الرمز الخاص أو العنوان…"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />
@@ -788,7 +796,14 @@ function CustomersPage() {
                     <CardHeader className="px-4 py-3">
                       <div className="flex justify-between items-start">
                         <div className="min-w-0">
-                          <div className="font-bold text-base truncate">{c.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold text-base truncate">{c.name}</div>
+                            {c.code && (
+                              <Badge variant="outline" className="text-xs px-2 py-1">
+                                {c.code}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {TYPE_LABEL[c.customer_type]}
                           </div>
@@ -1125,6 +1140,15 @@ function CustomersPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="اسم العميل الكامل"
                 required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>الرمز الخاص للعميل (اختياري)</Label>
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="مثال: C-1001"
+                dir="ltr"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
