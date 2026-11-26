@@ -48,6 +48,20 @@ export const RPC_MAX_ATTEMPTS = 6;
 export const RPC_BACKOFF_BASE_MS = 4000;
 export const RPC_BACKOFF_MAX_MS = 5 * 60 * 1000;
 
+export async function getAllowedRpcNames(): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("offline_rpc_allowlist" as never)
+    .select("rpc_name")
+    .eq("allowed", true);
+  return new Set((data ?? []).map((row) => String((row as Record<string, unknown>)["rpc_name"])));
+}
+
+async function assertAllowedRpc(name: string, allowed: Set<string> | undefined) {
+  if (allowed && !allowed.has(name)) {
+    throw new Error("RPC محظور على طابور الأوفلاين من الخادم");
+  }
+}
+
 /** تراجع تدريجي: 4، 8، 16… ثوانٍ (محدود بالمحاولات القصوى). */
 export function rpcBackoffDelayMs(attempts: number): number {
   const exponent = Math.max(0, Math.min(attempts, 5));
@@ -144,6 +158,8 @@ export async function enqueueRpc(
 ): Promise<void> {
   const existing = await getRpcQueue();
   if (existing.some((item) => item.id === operation.id)) return;
+  const allowedRpcNames = await getAllowedRpcNames();
+  await assertAllowedRpc(operation.name, allowedRpcNames);
   const { data: authData } = await supabase.auth.getSession();
   if (!authData.session) throw new Error("سجّل الدخول أولًا ليتم ربط العملية بحسابك وحفظها بأمان");
   const item: QueuedRpc = {
@@ -196,10 +212,23 @@ export async function removeRpc(id: string): Promise<void> {
 
 /** زيادة عداد المحاولات لعملية فاشلة (يُستخدم لسياسة التراجع التدريجي). */
 export async function recordRpcFailure(id: string): Promise<void> {
+  const { data: current } = await supabase
+    .from("offline_rpc_failures" as never)
+    .select("attempts")
+    .eq("operation_id", id)
+    .single();
+  const attempts = Math.max(
+    0,
+    (((current as Record<string, unknown> | null)?.["attempts"] as number | undefined) ?? 0) + 1,
+  );
+  await supabase
+    .from("offline_rpc_failures" as never)
+    .upsert({ operation_id: id, attempts, last_attempted_at: new Date().toISOString() } as never, {
+      onConflict: "operation_id",
+    });
   const queue = await getRpcQueue();
   const item = queue.find((entry) => entry.id === id);
-  if (!item) return;
-  await persistRpcItem({ ...item, attempts: item.attempts + 1 });
+  if (item) await persistRpcItem({ ...item, attempts: Math.max(item.attempts, attempts) });
 }
 
 /** حفظ حالة تعارض: السجل على الخادم أحدث من التعديل المحلي — توقف عن الاستبدال الصامت واحتفظ بالعملية في الطابور. */

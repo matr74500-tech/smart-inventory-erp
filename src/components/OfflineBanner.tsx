@@ -109,10 +109,14 @@ export function OfflineBanner() {
       }}
     >
       {!online
-        ? `أنت الآن دون اتصال؛ العمليات المحفوظة محليًا: ${pendingCount}`
-        : syncError
-          ? `تعذرت مزامنة بعض العمليات؛ ما زالت محفوظة على هذا الجهاز (${pendingCount}). ${syncError}`
-          : `توجد ${pendingCount} عملية بانتظار المزامنة`}
+        ? `أنت الآن دون اتصال؛ العمليات المحفوظة محليًا: ${pendingCount} — ستتم مزامنتها عند عودة الإنترنت.`
+        : pendingCount > 0
+          ? syncError
+            ? `تعذرت مزامنة الكميات؛ يمكن الإعادة تلقائيًا (${pendingCount} عملية). ${syncError}`
+            : `جارٍ محاولة إعادة المزامنة: ${pendingCount} عملية بانتظار التنفيذ`
+          : syncError
+            ? `تعذرت مزامنة بعض العمليات. ${syncError}`
+            : "جميع العمليات تمت مزامنتها"}
       {hasConflicts && (
         <div className="mt-2 flex flex-col items-center gap-2 text-sm">
           <div className="font-semibold">وجود تعارض أحدث بين تعديلك وتعديلات الآخرين — اختر:</div>

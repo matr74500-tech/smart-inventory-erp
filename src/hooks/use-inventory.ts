@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { getInventorySnapshot, saveInventorySnapshot } from "@/lib/offline/inventory-cache";
+import { peekInventorySnapshot, saveInventorySnapshot } from "@/lib/offline/inventory-cache";
 
 export type Product = Tables<"products">;
 export type Warehouse = Tables<"warehouses">;
@@ -49,13 +49,16 @@ export function useInventory() {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheError, setCacheError] = useState<string | null>(null);
   const currencyErrorShown = useRef(false);
 
   const load = useCallback(async () => {
     if (!session || authLoading) return;
     const restoreSnapshot = async () => {
-      const snapshot = await getInventorySnapshot(session.user.id);
+      const { snapshot, error } = await peekInventorySnapshot(session.user.id);
+      if (error) setCacheError(error);
       if (!snapshot) return false;
+      setCacheError(null);
       setProducts(snapshot.products);
       setWarehouses(snapshot.warehouses);
       setStock(snapshot.stock);
@@ -193,6 +196,7 @@ export function useInventory() {
     currencies,
     exchangeRates,
     loading,
+    cacheError,
     qty,
     categoryName,
     reload: load,

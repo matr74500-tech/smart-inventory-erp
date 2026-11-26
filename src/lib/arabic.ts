@@ -1,13 +1,23 @@
-/** Normalizes Arabic text so searches ignore letter-form differences (أ إ آ ا، ة ه، ى ي) and diacritics. */
+const ARABIC_DIACRITIC_CODES = new Set<number>([
+  0x064b, 0x064c, 0x064d, 0x064e, 0x064f, 0x0650, 0x0651, 0x0652, 0x0640, 0x0670, 0x0654, 0x0655,
+]);
+const ARABIC_HAMZAS_TO_ALIF = /[\u0623\u0625\u0622\u0671]/g;
+const ARABIC_TA_TO_HEH = /\u0629/g;
+const ARABIC_ALIF_TO_YEH = /\u0649/g;
+const ARABIC_WAW_TO_YEH = /[\u0624\u0626]/g;
+
+function removeDiacritics(input: string): string {
+  return [...input].filter((ch) => !ARABIC_DIACRITIC_CODES.has(ch.codePointAt(0) ?? 0)).join("");
+}
+
+/** Normalizes Arabic text so searches ignore letter-form differences and diacritics. */
 export function normalizeArabic(input: string): string {
-  return input
+  return removeDiacritics(input)
     .toLowerCase()
-    .replace(/[\u064B-\u0652\u0640]/g, "") // tashkeel + tatweel
-    .replace(/[أإآٱ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .replace(/ؤ/g, "و")
-    .replace(/ئ/g, "ي")
+    .replace(ARABIC_HAMZAS_TO_ALIF, "ا")
+    .replace(ARABIC_TA_TO_HEH, "ه")
+    .replace(ARABIC_ALIF_TO_YEH, "ي")
+    .replace(ARABIC_WAW_TO_YEH, "ي")
     .replace(/\s+/g, " ")
     .trim();
 }

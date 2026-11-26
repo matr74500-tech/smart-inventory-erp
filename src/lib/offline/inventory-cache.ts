@@ -51,15 +51,26 @@ export async function saveInventorySnapshot(userId: string, snapshot: InventoryS
   db.close();
 }
 
-export async function getInventorySnapshot(userId: string): Promise<InventorySnapshot | null> {
+export async function peekInventorySnapshot(userId: string): Promise<{
+  snapshot: InventorySnapshot | null;
+  error: string | null;
+}> {
   const db = await openCache();
-  if (!db) return null;
+  if (!db) return { snapshot: null, error: "المتصفح لا يدعم IndexedDB" };
   const snapshot = await new Promise<InventorySnapshot | null>((resolve, reject) => {
     const request = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(userId);
     request.onsuccess = () => resolve((request.result as InventorySnapshot | undefined) ?? null);
     request.onerror = () => reject(request.error);
   }).catch(() => null);
   db.close();
+  if (!snapshot) return { snapshot: null, error: "لا توجد نسخة محلية" };
+  if (isExpired(snapshot.savedAt))
+    return { snapshot: null, error: "النسخة المحلية انتهت الصلاحية (7 أيام)" };
+  return { snapshot, error: null };
+}
+
+export async function getInventorySnapshot(userId: string): Promise<InventorySnapshot | null> {
+  const { snapshot } = await peekInventorySnapshot(userId);
   if (!snapshot || isExpired(snapshot.savedAt)) {
     // البيانات منتهية الصلاحية: احذفها وأخبر المتصل بالعودة للقيم الحية
     void wipeInventoryCache(userId);

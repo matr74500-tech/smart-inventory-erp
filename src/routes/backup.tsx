@@ -51,6 +51,14 @@ const TABLES = [
   "cash_transactions",
   "daily_cash_closings",
 ] as const;
+
+async function fetchAllowedTables(): Promise<Set<string>> {
+  const { data } = await supabase
+    .from("backup_allowed_tables" as never)
+    .select("table_name")
+    .eq("allowed", true);
+  return new Set((data ?? []).map((row) => String((row as Record<string, unknown>)["table_name"])));
+}
 type Row = { id: string; created_at: string; size_bytes: number };
 
 type TableName = keyof Database["public"]["Tables"];
@@ -140,12 +148,17 @@ function previewRows(data: BackupData): Array<{ name: string; count: number }> {
   }));
 }
 
-/** Ejecuta la restauración: inserciones con onConflict=id + ignoreDuplicates para no sobrescribir datos existentes. */
-async function executeRestore(data: BackupData): Promise<{ ok: boolean; message: string }> {
+async function executeRestore(
+  data: BackupData,
+  allowedTables: Set<string>,
+): Promise<{ ok: boolean; message: string }> {
   const tables = data.tables ?? {};
+  const skipped = Object.keys(tables).filter(
+    (t) => Array.isArray(tables[t]) && tables[t].length > 0 && !allowedTables.has(t),
+  );
   const names = Object.keys(tables).filter((t) => {
     const rows = tables[t];
-    return Array.isArray(rows) && rows.length > 0;
+    return Array.isArray(rows) && rows.length > 0 && allowedTables.has(t);
   });
   let total = 0;
   for (const t of restoreOrder(names)) {
@@ -156,7 +169,8 @@ async function executeRestore(data: BackupData): Promise<{ ok: boolean; message:
     if (error) return { ok: false, message: `${t}: ${error.message}` };
     total += rows.length;
   }
-  return { ok: true, message: `تمت الاستعادة: ${total} سجل` };
+  const skippedText = skipped.length ? `؛ تم تجاهل ${skipped.length} جدول غير مسموح` : "";
+  return { ok: true, message: `تمت الاستعادة: ${total} سجل${skippedText}` };
 }
 
 async function collect() {
@@ -209,6 +223,7 @@ function BackupPage() {
   const [file, setFile] = useState<BackupData | null>(null);
   const [preview, setPreview] = useState<Array<{ name: string; count: number }> | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [allowedTables, setAllowedTables] = useState<Set<string>>(new Set(TABLES));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const load = () =>
     supabase
@@ -217,7 +232,8 @@ function BackupPage() {
       .order("created_at", { ascending: false })
       .then(({ data }) => setRows(data ?? []));
   useEffect(() => {
-    load();
+    void load();
+    void fetchAllowedTables().then(setAllowedTables);
   }, []);
 
   async function run(target: "device" | "cloud") {
@@ -227,11 +243,16 @@ function BackupPage() {
       if (target === "device") download(data, fname(data.created_at));
       else {
         const { data: u } = await supabase.auth.getUser();
-        const { error } = await supabase.from("backups").insert({
-          data: data as never,
-          user_id: u.user?.id ?? null,
-          size_bytes: JSON.stringify(data).length,
-        });
+        const sizeBytes = JSON.stringify(data).length;
+        const { error } = await supabase.rpc(
+          "backup_create_if_allowed" as never,
+          {
+            _allowed_tables: [...allowedTables],
+            _data: data as never,
+            _user_id: u.user?.id ?? null,
+            _size_bytes: sizeBytes,
+          } as never,
+        );
         if (error) throw error;
         load();
       }
@@ -270,7 +291,7 @@ function BackupPage() {
     if (!file) return;
     setRestoring(true);
     try {
-      const msg = await executeRestore(file);
+      const msg = await executeRestore(file, await fetchAllowedTables());
       if (msg.ok) {
         toast.success(msg.message);
         setFile(null);
@@ -291,7 +312,8 @@ function BackupPage() {
         <div className="rounded-xl bg-card shadow-card p-5 space-y-3">
           <div className="font-bold">حفظ في السحابة (المنصة)</div>
           <p className="text-sm text-muted-foreground">
-            نسخة محفوظة على الخادم يمكن تنزيلها من أي جهاز.
+            نسخة محفوظة على الخادم يمكن تنزيلها من أي جهاز. عدد الجداول المسموحة:{" "}
+            {allowedTables.size}.
           </p>
           <Button onClick={() => run("cloud")} disabled={!!busy}>
             {busy === "cloud" ? (

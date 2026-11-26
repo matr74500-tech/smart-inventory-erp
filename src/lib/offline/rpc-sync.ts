@@ -1,6 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getAllowedRpcNames,
   getRpcQueue,
   recordRpcFailure,
   removeRpc,
@@ -89,6 +90,7 @@ export async function syncQueuedRpc(options?: { forceIds?: string[] }): Promise<
 }> {
   const queue = await getRpcQueue();
   const { data: authData } = await supabase.auth.getSession();
+  const allowedRpcNames = await getAllowedRpcNames();
   let synced = 0;
   const errors: string[] = [];
   const failedIds: string[] = [];
@@ -100,6 +102,11 @@ export async function syncQueuedRpc(options?: { forceIds?: string[] }): Promise<
   };
   for (const item of queue) {
     if (item.status === "manual") continue;
+    if (!allowedRpcNames.has(item.name)) {
+      errors.push(`RPC محظور على طابور الأوفلاين: ${item.name}`);
+      await recordRpcFailure(item.id);
+      continue;
+    }
     if (!authData.session) {
       errors.push("سجّل الدخول بالحساب نفسه لمزامنة العمليات المحفوظة");
       break;
