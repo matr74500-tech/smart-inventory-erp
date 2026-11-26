@@ -36,7 +36,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const Route = createFileRoute("/inventory")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -214,9 +221,7 @@ function InventoryPage() {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div className="flex flex-col lg:flex-row gap-3 w-full lg:w-auto">
             <div className="relative flex-1 min-w-[280px]">
-              <Search
-                className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 className="pr-10 h-11 bg-card"
                 placeholder="ابحث بالاسم أو الكود أو الباركود…"
@@ -241,7 +246,11 @@ function InventoryPage() {
                   className="hidden"
                   onChange={(e) => importExcel(e.target.files?.[0])}
                 />
-                <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importing}>
+                <Button
+                  variant="outline"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={importing}
+                >
                   {importing ? (
                     <>
                       <Loader2 className="mr-2 size-4 animate-spin" />
@@ -357,9 +366,7 @@ function InventoryPage() {
                       الإجمالي
                     </th>
                   )}
-                  {canAction("inventory.edit") && (
-                    <th className="p-4 text-right w-12"></th>
-                  )}
+                  {canAction("inventory.edit") && <th className="p-4 text-right w-12"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -395,7 +402,9 @@ function InventoryPage() {
                             {canField("expiry_date") && <ExpiryBadge date={p.expiry_date} />}
                             <div className="text-xs text-muted-foreground mt-0.5">
                               {p.unit}
-                              {p.major_unit ? ` · ${p.major_unit} (${Number(p.pack_capacity)})` : ""}
+                              {p.major_unit
+                                ? ` · ${p.major_unit} (${Number(p.pack_capacity)})`
+                                : ""}
                               {p.model_no ? ` · ${p.model_no}` : ""}
                             </div>
                           </div>
@@ -410,7 +419,9 @@ function InventoryPage() {
                       {(canField("category_id") || canField("shelf")) && (
                         <td className="p-4 text-xs text-muted-foreground">
                           {canField("category_id") && (
-                            <div className="text-foreground">{categoryName(p.category_id) || "—"}</div>
+                            <div className="text-foreground">
+                              {categoryName(p.category_id) || "—"}
+                            </div>
                           )}
                           <div>{p.shelf ?? "—"}</div>
                         </td>
@@ -435,7 +446,10 @@ function InventoryPage() {
                         >
                           {total}
                           {low && (
-                            <Badge variant="outline" className="ml-2 text-xs border-destructive text-destructive">
+                            <Badge
+                              variant="outline"
+                              className="ml-2 text-xs border-destructive text-destructive"
+                            >
                               ناقص
                             </Badge>
                           )}

@@ -16,7 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const Route = createFileRoute("/movements")({
   head: () => ({
@@ -146,7 +153,9 @@ function MovementsPage() {
         <div className="grid sm:grid-cols-4 gap-3">
           <Card className="p-4 shadow-sm border">
             <CardHeader className="px-0 py-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">إجمالي الحركات</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                إجمالي الحركات
+              </CardTitle>
             </CardHeader>
             <CardContent className="pb-0">
               <div className="text-2xl font-bold text-primary">{filtered.length}</div>
@@ -154,7 +163,9 @@ function MovementsPage() {
           </Card>
           <Card className="p-4 shadow-sm border">
             <CardHeader className="px-0 py-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">خروج (بيع / صرف)</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                خروج (بيع / صرف)
+              </CardTitle>
             </CardHeader>
             <CardContent className="pb-0">
               <div className="text-2xl font-bold text-destructive">
@@ -164,7 +175,9 @@ function MovementsPage() {
           </Card>
           <Card className="p-4 shadow-sm border">
             <CardHeader className="px-0 py-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">دخول (شراء / إيداع)</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                دخول (شراء / إيداع)
+              </CardTitle>
             </CardHeader>
             <CardContent className="pb-0">
               <div className="text-2xl font-bold text-success">
@@ -178,7 +191,9 @@ function MovementsPage() {
             </CardHeader>
             <CardContent className="pb-0">
               <div className="text-sm font-semibold">
-                {filtered.length > 0 ? new Date(filtered[0].created_at).toLocaleDateString("ar") : "—"}
+                {filtered.length > 0
+                  ? new Date(filtered[0].created_at).toLocaleDateString("ar")
+                  : "—"}
               </div>
             </CardContent>
           </Card>
@@ -215,7 +230,9 @@ function MovementsPage() {
           <Card className="border-destructive bg-destructive/5 shadow-sm">
             <CardContent className="p-4 flex items-center gap-2">
               <AlertTriangle className="size-5 text-destructive" />
-              <span className="text-sm text-destructive">تعذر تحميل سجل الحركات من قاعدة البيانات.</span>
+              <span className="text-sm text-destructive">
+                تعذر تحميل سجل الحركات من قاعدة البيانات.
+              </span>
             </CardContent>
           </Card>
         )}
@@ -246,8 +263,7 @@ function MovementsPage() {
                   let formattedDate = "—";
                   if (m.created_at) {
                     const date = new Date(m.created_at);
-                    if (!Number.isNaN(date.getTime()))
-                      formattedDate = date.toLocaleString("ar");
+                    if (!Number.isNaN(date.getTime())) formattedDate = date.toLocaleString("ar");
                   }
                   const quantitySign =
                     m.kind === "sale" || m.kind === "return" || m.kind === "payment" ? "-" : "+";
@@ -257,10 +273,7 @@ function MovementsPage() {
                         <Badge
                           variant={
                             (KIND_VARIANT[m.kind ?? ""] as
-                              | "default"
-                              | "destructive"
-                              | "outline"
-                              | "secondary") ?? "secondary"
+                              "default" | "destructive" | "outline" | "secondary") ?? "secondary"
                           }
                         >
                           {KIND_LABELS[m.kind ?? ""] || m.kind || "حركة"}
@@ -283,15 +296,16 @@ function MovementsPage() {
                           <Calendar className="size-3.5" /> {formattedDate}
                         </span>
                       </td>
-                      <td className="p-3 text-muted-foreground line-clamp-1">
-                        {m.note || "—"}
-                      </td>
+                      <td className="p-3 text-muted-foreground line-clamp-1">{m.note || "—"}</td>
                     </tr>
                   );
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-muted-foreground flex flex-col items-center gap-2">
+                    <td
+                      colSpan={7}
+                      className="p-12 text-center text-muted-foreground flex flex-col items-center gap-2"
+                    >
                       <History className="size-16 opacity-30" />
                       <p>لا توجد حركات مسجلة في السجل بعد</p>
                     </td>
