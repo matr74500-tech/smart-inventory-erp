@@ -42,6 +42,7 @@ import { Route as System_timezoneRouteImport } from './routes/system_timezone'
 import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as Ui_themeRouteImport } from './routes/ui_theme'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as ProfileRouteImport } from './routes/profile'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -209,6 +210,12 @@ const UsersRoute = UsersRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity_log': typeof Activity_logRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
+  '/profile': typeof ProfileRoute
   '/purchase_orders': typeof Purchase_ordersRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
@@ -261,6 +269,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
+  '/profile': typeof ProfileRoute
   '/purchase_orders': typeof Purchase_ordersRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/movements': typeof MovementsRoute
   '/prices': typeof PricesRoute
+  '/profile': typeof ProfileRoute
   '/purchase_orders': typeof Purchase_ordersRoute
   '/purchases': typeof PurchasesRoute
   '/reorders': typeof ReordersRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/movements'
     | '/prices'
+    | '/profile'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/movements'
     | '/prices'
+    | '/profile'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -404,6 +416,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/movements'
     | '/prices'
+    | '/profile'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -457,6 +470,7 @@ export interface RootRouteChildren {
   TransfersRoute: typeof TransfersRoute
   Ui_themeRoute: typeof Ui_themeRoute
   UsersRoute: typeof UsersRoute
+  ProfileRoute: typeof ProfileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -571,6 +585,13 @@ declare module '@tanstack/react-router' {
       path: '/prices'
       fullPath: '/prices'
       preLoaderRoute: typeof PricesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/purchase_orders': {
@@ -692,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -729,6 +757,7 @@ const rootRouteChildren: RootRouteChildren = {
   TransfersRoute: TransfersRoute,
   Ui_themeRoute: Ui_themeRoute,
   UsersRoute: UsersRoute,
+  ProfileRoute: ProfileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

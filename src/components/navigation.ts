@@ -29,6 +29,7 @@ import {
   Move,
   Share2,
   Clock,
+  User,
 } from "lucide-react";
 
 export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[] }[] = [
@@ -67,6 +68,7 @@ export const NAV: { to: string; label: string; icon: typeof Boxes; roles?: Role[
   { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"] },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"] },
   { to: "/cleanup", label: "حذف وتنظيف البيانات", icon: Trash2, roles: ["admin"] },
+  { to: "/profile", label: "ملفي الشخصي", icon: User },
 ];
 
 export const ADMIN_ONLY = ["/users", "/backup", "/cleanup"];
