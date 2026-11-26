@@ -5,7 +5,7 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
-  authenticatedPage: async ({ page }, use) => {
+  authenticatedPage: async ({ page }, providePage) => {
     const username = "matr74500";
     const password = "TestPass123!";
 
@@ -18,7 +18,7 @@ export const test = base.extend<TestFixtures>({
     await page.waitForURL("/", { timeout: 30000 });
     await page.waitForLoadState("networkidle");
 
-    await use(page);
+    await providePage(page);
   },
 });
 
