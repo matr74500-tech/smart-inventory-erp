@@ -247,10 +247,10 @@ function ReturnsPage() {
     const operationId = crypto.randomUUID();
     const args = {
       _operation_id: operationId,
-      _invoice_id: selected.id,
-      _customer_id: selected.customer_id ?? "",
+      _invoice_id: selected.id?.trim(),
+      _customer_id: selected.customer_id?.trim() || "",
       _customer_name: selected.customer_name ?? "",
-      _warehouse: selected.warehouse_id,
+      _warehouse: selected.warehouse_id?.trim() || "",
       _currency_code: selected.currency_code,
       _rate_to_yer: Number(selected.exchange_rate_to_yer) || 1,
       _refund_kind: refundKind,
@@ -268,15 +268,15 @@ function ReturnsPage() {
     setBusy(true);
     try {
       if (!navigator.onLine) {
-        await enqueueRpc({ id: operationId, name: "post_return_offline", args });
+        await enqueueRpc({ id: operationId, name: "post_return_offline", args: args as never });
         toast.success("تم حفظ المرتجع محليًا وستتم مزامنته عند عودة الاتصال");
         resetBuilder();
         return;
       }
-      const { error } = await supabase.rpc("post_return", args);
+      const { error } = await supabase.rpc("post_return" as never, args as never);
       if (error) {
         if (/network|fetch|offline|failed/i.test(error.message)) {
-          await enqueueRpc({ id: operationId, name: "post_return_offline", args });
+          await enqueueRpc({ id: operationId, name: "post_return_offline", args: args as never });
           toast.success("تعذر الاتصال؛ حُفظ المرتجع للمزامنة");
           resetBuilder();
           return;
@@ -290,7 +290,7 @@ function ReturnsPage() {
       void refreshInvoices();
     } catch (error) {
       if (isTransientNetworkError(error)) {
-        await enqueueRpc({ id: operationId, name: "post_return_offline", args });
+        await enqueueRpc({ id: operationId, name: "post_return_offline", args: args as never });
         toast.success("انقطع الاتصال؛ حُفظ المرتجع للمزامنة");
         resetBuilder();
         return;

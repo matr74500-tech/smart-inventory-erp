@@ -56,6 +56,10 @@ function StocktakePage() {
 
   async function save(productId: string) {
     if (!canAction("stocktake.adjust")) return;
+    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
+      toast.error("الرجاء اختيار المستودع");
+      return;
+    }
     const v = drafts[productId];
     if (v === undefined || v === "") return;
     setSaving(productId);
@@ -123,6 +127,10 @@ function StocktakePage() {
   const pending = Object.entries(drafts).filter(([, v]) => v !== "");
   async function approveAll() {
     if (!canAction("stocktake.adjust")) return;
+    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
+      toast.error("الرجاء اختيار المستودع");
+      return;
+    }
     if (!pending.length || !confirm(`اعتماد الجرد وتسوية ${pending.length} صنف؟`)) return;
     setSaving("all");
     const operationId = crypto.randomUUID();

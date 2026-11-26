@@ -169,7 +169,7 @@ function PurchasesPage() {
 
   async function post() {
     if (!canAction("purchases.post")) return;
-    if (!warehouse || !lines.length) return;
+    if (!warehouse || warehouse === "undefined" || warehouse === "null" || !lines.length) return;
     setBusy(true);
     const items = lines.map((l) => ({
       product_id: l.product.id,
@@ -181,7 +181,7 @@ function PurchasesPage() {
     const operationId = crypto.randomUUID();
     const args = {
       _operation_id: operationId,
-      _supplier: supplier || "",
+      _supplier: supplier?.trim() || "",
       _warehouse: warehouse,
       _items: items,
     };

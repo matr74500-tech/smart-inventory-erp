@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Search,
@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   QrCode,
   AlertTriangle,
+  UserPlus,
+  Contact,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -17,6 +19,7 @@ import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useInventory, type Product } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
 import { findByCode, PRICE_TIERS, type PriceKey } from "@/lib/inventory-utils";
+import { isContactPickerSupported, pickPhoneContact } from "@/lib/contacts";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
@@ -41,6 +44,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/sales")({
@@ -77,6 +88,20 @@ function SalesPage() {
   const [currency, setCurrency] = useState("YER");
   const [paymentMethod, setPaymentMethod] = useState("نقدي YER");
   const [customerId, setCustomerId] = useState("");
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [pendingCustomerOp, setPendingCustomerOp] = useState<{
+    operationId: string;
+    customerId: string;
+  } | null>(null);
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    phone: "",
+    secondary_phone: "",
+    address: "",
+    customer_type: "credit" as "cash" | "credit" | "wholesale",
+    credit_limit_yer: "500000",
+  });
   const [discount, setDiscount] = useState("0");
   const [tax, setTax] = useState("0");
   const [busy, setBusy] = useState(false);
@@ -208,7 +233,7 @@ function SalesPage() {
       toast.error("السلة فارغة");
       return null;
     }
-    if (!warehouse) {
+    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
       toast.error("الرجاء اختيار المستودع");
       return null;
     }
@@ -221,9 +246,9 @@ function SalesPage() {
     const operationId = draftId ?? crypto.randomUUID();
     const args = {
       _id: operationId,
-      _customer_id: selectedCustomer?.id ?? "",
+      _customer_id: selectedCustomer?.id?.trim() || null,
       _customer_name: selectedCustomer?.name ?? "",
-      _warehouse: warehouse,
+      _warehouse: warehouse?.trim() || null,
       _currency_code: currency,
       _rate_to_yer: Number(currentRate),
       _payment_method: paymentMethod,
@@ -240,18 +265,20 @@ function SalesPage() {
       })),
     };
     if (!navigator.onLine) {
-      await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+      await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args: args as never });
       setDraftId(operationId);
       toast.success("تم حفظ مسودة البيع محليًا وستتم مزامنتها عند عودة الاتصال");
       return operationId;
     }
     try {
-      const { data, error } = await supabase.rpc("save_sale_draft", {
-        ...args,
-      });
+      const { data, error } = await supabase.rpc("save_sale_draft" as never, args as never);
       if (error) {
         if (/network|fetch|offline|failed/i.test(error.message)) {
-          await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+          await enqueueRpc({
+            id: operationId,
+            name: "save_sale_draft_offline",
+            args: args as never,
+          });
           setDraftId(operationId);
           toast.success("تعذر الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
           return operationId;
@@ -264,7 +291,11 @@ function SalesPage() {
       return data;
     } catch (error) {
       if (isTransientNetworkError(error)) {
-        await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args });
+        await enqueueRpc({
+          id: operationId,
+          name: "save_sale_draft_offline",
+          args: args as never,
+        });
         setDraftId(operationId);
         toast.success("انقطع الاتصال؛ حُفظت مسودة البيع محليًا للمزامنة");
         return operationId;
@@ -347,6 +378,162 @@ function SalesPage() {
       setBusy(false);
     }
   }
+
+  const resetNewCustomer = () => {
+    setNewCustomer({
+      name: "",
+      phone: "",
+      secondary_phone: "",
+      address: "",
+      customer_type: "credit",
+      credit_limit_yer: "500000",
+    });
+  };
+
+  useEffect(() => {
+    if (!customerDialogOpen) setPendingCustomerOp(null);
+  }, [customerDialogOpen]);
+
+  const openCustomerDialog = () => {
+    if (!pendingCustomerOp) {
+      setPendingCustomerOp({ operationId: crypto.randomUUID(), customerId: crypto.randomUUID() });
+    }
+    setCustomerDialogOpen(true);
+  };
+
+  const importCustomerContact = async () => {
+    if (!isContactPickerSupported()) {
+      toast.error("استيراد جهات الاتصال غير مدعوم في هذا المتصفح");
+      return;
+    }
+    const picked = await pickPhoneContact();
+    if (!picked?.phone) {
+      toast.error("لم يتم اختيار رقم هاتف صالح");
+      return;
+    }
+    setNewCustomer((prev) => ({
+      ...prev,
+      phone: picked.phone,
+      ...(picked.name && !prev.name.trim() ? { name: picked.name } : {}),
+    }));
+    toast.success("تم استيراد بيانات جهة الاتصال");
+  };
+
+  const saveNewCustomer = async (e: FormEvent) => {
+    e.preventDefault();
+    if (savingCustomer) return;
+    if (!newCustomer.name.trim() || !newCustomer.phone.trim()) {
+      toast.error("الاسم ورقم الهاتف مطلوبان");
+      return;
+    }
+    const creditLimit = Number(newCustomer.credit_limit_yer);
+    if (!Number.isFinite(creditLimit) || creditLimit < 0) {
+      toast.error("سقف المديونية يجب أن يكون رقماً موجباً أو صفراً");
+      return;
+    }
+    setSavingCustomer(true);
+    try {
+      const pending = pendingCustomerOp ?? {
+        operationId: crypto.randomUUID(),
+        customerId: crypto.randomUUID(),
+      };
+      if (!pendingCustomerOp) setPendingCustomerOp(pending);
+      const args = {
+        _operation_id: pending.operationId,
+        _id: pending.customerId,
+        _name: newCustomer.name.trim(),
+        _phone: newCustomer.phone.trim(),
+        _secondary_phone: newCustomer.secondary_phone.trim() || "",
+        _address: newCustomer.address.trim(),
+        _customer_type: newCustomer.customer_type,
+        _credit_limit_yer: creditLimit,
+        _inactive_alert_enabled: true,
+      };
+      const cacheLocalCustomer = async () => {
+        setCustomers((items) => [
+          ...items,
+          {
+            id: pending.customerId,
+            name: newCustomer.name.trim(),
+            phone: newCustomer.phone.trim(),
+            secondary_phone: newCustomer.secondary_phone.trim() || null,
+            address: newCustomer.address.trim(),
+            customer_type: newCustomer.customer_type,
+            credit_limit_yer: Number(newCustomer.credit_limit_yer) || 0,
+            balance_yer: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            active: true,
+            inactive_alert_enabled: true,
+            last_sale_at: null,
+          },
+        ]);
+      };
+      if (!navigator.onLine) {
+        await enqueueRpc({ id: pending.operationId, name: "save_customer_offline", args });
+        await cacheLocalCustomer();
+        toast.success("تم حفظ العميل على الجهاز وسيُزامن عند عودة الاتصال");
+        setCustomerDialogOpen(false);
+        resetNewCustomer();
+        return;
+      }
+      let customerResult: { data: string | null; error: { message: string } | null };
+      try {
+        customerResult = await supabase.rpc("save_customer_offline", args);
+      } catch (networkError) {
+        if (!isTransientNetworkError(networkError)) {
+          toast.error(networkError instanceof Error ? networkError.message : "تعذر حفظ العميل");
+          return;
+        }
+        await enqueueRpc({ id: pending.operationId, name: "save_customer_offline", args });
+        await cacheLocalCustomer();
+        toast.success("انقطع الاتصال؛ حُفظ العميل محليًا للمزامنة");
+        setCustomerDialogOpen(false);
+        resetNewCustomer();
+        return;
+      }
+      const { data: savedCustomerId, error } = customerResult;
+      if (error) {
+        if (isTransientNetworkError(error)) {
+          await enqueueRpc({ id: pending.operationId, name: "save_customer_offline", args });
+          await cacheLocalCustomer();
+          toast.success("تعذر الاتصال؛ حُفظ العميل محليًا للمزامنة");
+          setCustomerDialogOpen(false);
+          resetNewCustomer();
+          return;
+        }
+        toast.error(`تعذر حفظ العميل: ${error.message}`);
+        return;
+      }
+      if (!savedCustomerId) {
+        toast.error("تمت العملية دون إرجاع معرف العميل؛ أعد تحميل القائمة عند الاتصال");
+        return;
+      }
+      setCustomerId(savedCustomerId);
+      setCustomers((items) => [
+        ...items.filter((item) => item.id !== savedCustomerId),
+        {
+          id: savedCustomerId,
+          name: newCustomer.name.trim(),
+          phone: newCustomer.phone.trim(),
+          secondary_phone: newCustomer.secondary_phone.trim() || null,
+          address: newCustomer.address.trim(),
+          customer_type: newCustomer.customer_type,
+          credit_limit_yer: Number(newCustomer.credit_limit_yer) || 0,
+          balance_yer: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          active: true,
+          inactive_alert_enabled: true,
+          last_sale_at: null,
+        },
+      ]);
+      setCustomerDialogOpen(false);
+      resetNewCustomer();
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
 
   async function loadDraft(invoice: SalesInvoice) {
     const { data, error } = await supabase
@@ -604,11 +791,11 @@ function SalesPage() {
                   <div className="space-y-1">
                     <Label>العميل</Label>
                     <Select
-                      value={customerId || "__cash__"}
+                      value={customerId}
                       onValueChange={(value) => setCustomerId(value === "__cash__" ? "" : value)}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="عميل نقدي عام" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__cash__">عميل نقدي عام</SelectItem>
@@ -723,7 +910,7 @@ function SalesPage() {
                   onValueChange={(value) => setCustomerId(value === "__cash__" ? "" : value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="عميل نقدي عام" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__cash__">عميل نقدي عام</SelectItem>
@@ -734,6 +921,17 @@ function SalesPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={openCustomerDialog}
+                  disabled={!canAction("customers.manage")}
+                >
+                  <UserPlus className="size-4 ml-2" />
+                  إضافة عميل جديد
+                </Button>
               </div>
               <div className="space-y-1">
                 <Label>مستودع الصرف</Label>
@@ -918,6 +1116,117 @@ function SalesPage() {
                 حفظ وترحيل الفاتورة
               </Button>
             </div>
+
+            <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>إضافة عميل جديد</DialogTitle>
+                  <DialogDescription>
+                    أضف عميلاً جديداً من فاتورة البيع دون مغادرة الصفحة.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={saveNewCustomer} className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-customer-name">الاسم</Label>
+                    <Input
+                      id="new-customer-name"
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor="new-customer-phone">الهاتف</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={importCustomerContact}
+                        disabled={!isContactPickerSupported()}
+                      >
+                        <Contact className="size-4 ml-1" />
+                        استيراد
+                      </Button>
+                    </div>
+                    <Input
+                      id="new-customer-phone"
+                      type="tel"
+                      dir="ltr"
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الاسم الثانوي</Label>
+                    <Input
+                      value={newCustomer.secondary_phone}
+                      onChange={(e) =>
+                        setNewCustomer({ ...newCustomer, secondary_phone: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>العنوان</Label>
+                    <Input
+                      value={newCustomer.address}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>طبيعة العميل</Label>
+                      <Select
+                        value={newCustomer.customer_type}
+                        onValueChange={(value) =>
+                          setNewCustomer({
+                            ...newCustomer,
+                            customer_type: value as "cash" | "credit" | "wholesale",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">نقدي</SelectItem>
+                          <SelectItem value="credit">آجل</SelectItem>
+                          <SelectItem value="wholesale">جملة</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>سقف المديونية (ر.ي)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={newCustomer.credit_limit_yer}
+                        onChange={(e) =>
+                          setNewCustomer({ ...newCustomer, credit_limit_yer: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCustomerDialogOpen(false)}
+                    >
+                      إلغاء
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={savingCustomer || !canAction("customers.manage")}
+                    >
+                      {savingCustomer ? "جاري الحفظ..." : "حفظ العميل"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </TabsContent>
       </Tabs>

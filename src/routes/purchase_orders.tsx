@@ -122,7 +122,13 @@ function PurchaseOrdersPage() {
   }
 
   async function saveDraft(): Promise<string | null> {
-    if (!supplierId || !warehouseId || !lines.length) {
+    if (
+      !supplierId?.trim() ||
+      !warehouseId?.trim() ||
+      warehouseId === "undefined" ||
+      warehouseId === "null" ||
+      !lines.length
+    ) {
       toast.error("اختر المورد والمستودع وأضف صنفاً واحداً على الأقل");
       return null;
     }
@@ -144,10 +150,12 @@ function PurchaseOrdersPage() {
       return null;
     }
     const operationId = draftId ?? crypto.randomUUID();
+    const safeSupplierId = supplierId?.trim() || "";
+    const safeWarehouseId = warehouseId?.trim() || "";
     const args = {
       _id: operationId,
-      _supplier_id: supplierId,
-      _warehouse: warehouseId,
+      _supplier_id: safeSupplierId,
+      _warehouse: safeWarehouseId,
       _notes: notes.trim() || "",
       _items: items,
     };
@@ -157,13 +165,7 @@ function PurchaseOrdersPage() {
       toast.success("تم حفظ أمر الشراء محليًا وستتم مزامنته عند عودة الاتصال");
       return operationId;
     }
-    const { data, error } = await supabase.rpc("save_purchase_order_draft", {
-      _id: draftId ?? crypto.randomUUID(),
-      _supplier_id: supplierId,
-      _warehouse: warehouseId,
-      _notes: notes.trim() || "",
-      _items: items,
-    });
+    const { data, error } = await supabase.rpc("save_purchase_order_draft", args);
     if (error) {
       if (/network|fetch|offline|failed/i.test(error.message)) {
         await enqueueRpc({ id: operationId, name: "save_purchase_order_draft_offline", args });

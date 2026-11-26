@@ -16,6 +16,7 @@ import {
   CreditCard,
   Receipt,
   Send,
+  Contact,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -37,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { getPrivateSnapshot, savePrivateSnapshot } from "@/lib/offline/inventory-cache";
+import { isContactPickerSupported, pickPhoneContact } from "@/lib/contacts";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -175,6 +177,11 @@ function CustomersPage() {
   const [openVoucher, setOpenVoucher] = useState(false);
   const [openPlan, setOpenPlan] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [pendingCustomerOp, setPendingCustomerOp] = useState<{
+    operationId: string;
+    customerId: string;
+  } | null>(null);
 
   // Customer Form state
   const [name, setName] = useState("");
@@ -279,8 +286,35 @@ function CustomersPage() {
   const [pCount, setPCount] = useState("3");
   const [pDate, setPDate] = useState("");
 
+  useEffect(() => {
+    if (!openAdd) setPendingCustomerOp(null);
+  }, [openAdd]);
+
+  const openAddCustomer = () => {
+    if (!pendingCustomerOp) {
+      setPendingCustomerOp({ operationId: crypto.randomUUID(), customerId: crypto.randomUUID() });
+    }
+    setOpenAdd(true);
+  };
+
+  const importCustomerContact = async () => {
+    if (!isContactPickerSupported()) {
+      toast.error("استيراد جهات الاتصال غير مدعوم في هذا المتصفح");
+      return;
+    }
+    const picked = await pickPhoneContact();
+    if (!picked?.phone) {
+      toast.error("لم يتم اختيار رقم هاتف صالح");
+      return;
+    }
+    setPhone(picked.phone);
+    if (picked.name && !name.trim()) setName(picked.name);
+    toast.success("تم استيراد بيانات جهة الاتصال");
+  };
+
   const saveCustomer = async (e: FormEvent) => {
     e.preventDefault();
+    if (savingCustomer) return;
     if (!name.trim() || !phone.trim()) {
       toast.error("الاسم ورقم الهاتف مطلوبان");
       return;
@@ -290,109 +324,119 @@ function CustomersPage() {
       toast.error("سقف المديونية يجب أن يكون رقماً موجباً أو صفراً");
       return;
     }
-    const operationId = crypto.randomUUID();
-    const customerId = crypto.randomUUID();
-    const args = {
-      _operation_id: operationId,
-      _id: customerId,
-      _name: name.trim(),
-      _phone: phone.trim(),
-      _secondary_phone: secPhone.trim() || "",
-      _address: address.trim(),
-      _customer_type: type,
-      _credit_limit_yer: creditLimit,
-      _inactive_alert_enabled: true,
-    };
-    const localCustomer: Customer = {
-      id: customerId,
-      name: name.trim(),
-      phone: phone.trim(),
-      ...(secPhone.trim() ? { secondary_phone: secPhone.trim() } : {}),
-      address: address.trim(),
-      customer_type: type,
-      credit_limit: creditLimit,
-      balance: 0,
-      created_at: new Date().toISOString(),
-    };
-    const cacheLocalCustomer = async () => {
-      setCustomers((items) => [localCustomer, ...items.filter((item) => item.id !== customerId)]);
-      if (session?.user.id) {
-        const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
-        await savePrivateSnapshot(session.user.id, "customers", [
-          localCustomer,
-          ...(cached ?? []).filter((item) => item.id !== customerId),
-        ]);
-      }
-    };
-    if (!navigator.onLine) {
-      await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
-      await cacheLocalCustomer();
-      toast.success("تم حفظ العميل على الجهاز وسيُزامن عند عودة الاتصال");
-      setName("");
-      setPhone("");
-      setSecPhone("");
-      setAddress("");
-      setOpenAdd(false);
-      return;
-    }
-    let customerResult: { data: string | null; error: { message: string } | null };
+    setSavingCustomer(true);
     try {
-      customerResult = await supabase.rpc("save_customer_offline", args);
-    } catch (networkError) {
-      if (!isTransientNetworkError(networkError)) {
-        toast.error(networkError instanceof Error ? networkError.message : "تعذر حفظ العميل");
-        return;
-      }
-      await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
-      await cacheLocalCustomer();
-      toast.success("انقطع الاتصال؛ حُفظ العميل محليًا للمزامنة");
-      setName("");
-      setPhone("");
-      setSecPhone("");
-      setAddress("");
-      setOpenAdd(false);
-      return;
-    }
-    const { data: savedCustomerId, error } = customerResult;
-    if (error) {
-      if (isTransientNetworkError(error)) {
+      const pending = pendingCustomerOp ?? {
+        operationId: crypto.randomUUID(),
+        customerId: crypto.randomUUID(),
+      };
+      if (!pendingCustomerOp) setPendingCustomerOp(pending);
+      const operationId = pending.operationId;
+      const customerId = pending.customerId;
+      const args = {
+        _operation_id: operationId,
+        _id: customerId,
+        _name: name.trim(),
+        _phone: phone.trim(),
+        _secondary_phone: secPhone.trim() || "",
+        _address: address.trim(),
+        _customer_type: type,
+        _credit_limit_yer: creditLimit,
+        _inactive_alert_enabled: true,
+      };
+      const localCustomer: Customer = {
+        id: customerId,
+        name: name.trim(),
+        phone: phone.trim(),
+        ...(secPhone.trim() ? { secondary_phone: secPhone.trim() } : {}),
+        address: address.trim(),
+        customer_type: type,
+        credit_limit: creditLimit,
+        balance: 0,
+        created_at: new Date().toISOString(),
+      };
+      const cacheLocalCustomer = async () => {
+        setCustomers((items) => [localCustomer, ...items.filter((item) => item.id !== customerId)]);
+        if (session?.user.id) {
+          const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
+          await savePrivateSnapshot(session.user.id, "customers", [
+            localCustomer,
+            ...(cached ?? []).filter((item) => item.id !== customerId),
+          ]);
+        }
+      };
+      if (!navigator.onLine) {
         await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
         await cacheLocalCustomer();
-        toast.success("تعذر الاتصال؛ حُفظ العميل محليًا للمزامنة");
+        toast.success("تم حفظ العميل على الجهاز وسيُزامن عند عودة الاتصال");
+        setName("");
+        setPhone("");
+        setSecPhone("");
+        setAddress("");
         setOpenAdd(false);
         return;
       }
-      toast.error(`تعذر حفظ العميل: ${error.message}`);
-      return;
+      let customerResult: { data: string | null; error: { message: string } | null };
+      try {
+        customerResult = await supabase.rpc("save_customer_offline", args);
+      } catch (networkError) {
+        if (!isTransientNetworkError(networkError)) {
+          toast.error(networkError instanceof Error ? networkError.message : "تعذر حفظ العميل");
+          return;
+        }
+        await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+        await cacheLocalCustomer();
+        toast.success("انقطع الاتصال؛ حُفظ العميل محليًا للمزامنة");
+        setName("");
+        setPhone("");
+        setSecPhone("");
+        setAddress("");
+        setOpenAdd(false);
+        return;
+      }
+      const { data: savedCustomerId, error } = customerResult;
+      if (error) {
+        if (isTransientNetworkError(error)) {
+          await enqueueRpc({ id: operationId, name: "save_customer_offline", args });
+          await cacheLocalCustomer();
+          toast.success("تعذر الاتصال؛ حُفظ العميل محليًا للمزامنة");
+          setOpenAdd(false);
+          return;
+        }
+        toast.error(`تعذر حفظ العميل: ${error.message}`);
+        return;
+      }
+      if (!savedCustomerId) {
+        toast.error("تمت العملية دون إرجاع معرف العميل؛ أعد تحميل القائمة عند الاتصال");
+        return;
+      }
+      const { data, error: loadError } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", savedCustomerId)
+        .single();
+      if (loadError) {
+        toast.error(`تم حفظ العميل لكن تعذر تحديث القائمة: ${loadError.message}`);
+        return;
+      }
+      const mappedCustomer = mapCustomer(data);
+      setCustomers((items) => [mappedCustomer, ...items.filter((item) => item.id !== data.id)]);
+      if (session?.user.id) {
+        const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
+        await savePrivateSnapshot(session.user.id, "customers", [
+          mappedCustomer,
+          ...(cached ?? []).filter((item) => item.id !== data.id),
+        ]);
+      }
+      toast.success("تم حفظ العميل ومزامنته");
+      setName("");
+      setPhone("");
+      setSecPhone("");
+      setAddress("");
+      setOpenAdd(false);
+    } finally {
+      setSavingCustomer(false);
     }
-    if (!savedCustomerId) {
-      toast.error("تمت العملية دون إرجاع معرف العميل؛ أعد تحميل القائمة عند الاتصال");
-      return;
-    }
-    const { data, error: loadError } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("id", savedCustomerId)
-      .single();
-    if (loadError) {
-      toast.error(`تم حفظ العميل لكن تعذر تحديث القائمة: ${loadError.message}`);
-      return;
-    }
-    const mappedCustomer = mapCustomer(data);
-    setCustomers((items) => [mappedCustomer, ...items.filter((item) => item.id !== data.id)]);
-    if (session?.user.id) {
-      const cached = await getPrivateSnapshot<Customer[]>(session.user.id, "customers");
-      await savePrivateSnapshot(session.user.id, "customers", [
-        mappedCustomer,
-        ...(cached ?? []).filter((item) => item.id !== data.id),
-      ]);
-    }
-    toast.success("تم حفظ العميل ومزامنته");
-    setName("");
-    setPhone("");
-    setSecPhone("");
-    setAddress("");
-    setOpenAdd(false);
   };
 
   const saveVoucher = async (post = true) => {
@@ -427,7 +471,7 @@ function CustomersPage() {
       _operation_id: saveOperationId,
       _id: voucherIdStable,
       _kind: vType,
-      _customer_id: vCustId || "",
+      _customer_id: (vCustId?.trim() || null) as string | null,
       _payee: cust?.name ?? (vPayee.trim() || ""),
       _category: "عام",
       _amount: amt,
@@ -438,7 +482,11 @@ function CustomersPage() {
       _notes: vNotes.trim() || "",
     };
     if (!navigator.onLine) {
-      await enqueueRpc({ id: saveOperationId, name: "save_voucher_draft_offline", args });
+      await enqueueRpc({
+        id: saveOperationId,
+        name: "save_voucher_draft_offline",
+        args: args as never,
+      });
       if (post) {
         const postOperationId = crypto.randomUUID();
         await enqueueRpc({
@@ -455,10 +503,17 @@ function CustomersPage() {
       setOpenVoucher(false);
       return;
     }
-    const { data: voucherId, error } = await supabase.rpc("save_voucher_draft_offline", args);
+    const { data: voucherId, error } = await supabase.rpc(
+      "save_voucher_draft_offline" as never,
+      args as never,
+    );
     if (error) {
       if (/network|fetch|offline|failed/i.test(error.message)) {
-        await enqueueRpc({ id: saveOperationId, name: "save_voucher_draft_offline", args });
+        await enqueueRpc({
+          id: saveOperationId,
+          name: "save_voucher_draft_offline",
+          args: args as never,
+        });
         if (post) {
           const postOperationId = crypto.randomUUID();
           await enqueueRpc({
@@ -673,7 +728,7 @@ function CustomersPage() {
             >
               <Receipt className="size-4 ml-2" /> سند جديد
             </Button>
-            <Button onClick={() => setOpenAdd(true)} disabled={!canAction("customers.manage")}>
+            <Button onClick={openAddCustomer} disabled={!canAction("customers.manage")}>
               <UserPlus className="size-4 ml-2" /> إضافة عميل
             </Button>
           </div>
@@ -1064,7 +1119,20 @@ function CustomersPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>رقم الهاتف الأساسي *</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>رقم الهاتف الأساسي *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={importCustomerContact}
+                    disabled={!isContactPickerSupported()}
+                  >
+                    <Contact className="size-3 ml-1" />
+                    استيراد
+                  </Button>
+                </div>
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
