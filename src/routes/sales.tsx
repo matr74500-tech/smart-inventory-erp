@@ -32,7 +32,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -454,7 +461,8 @@ function SalesPage() {
                   .slice(0, 36)
                   .map((p) => {
                     const stock = qty(p.id);
-                    const lowStock = Number(p.reorder_level) > 0 && stock <= Number(p.reorder_level);
+                    const lowStock =
+                      Number(p.reorder_level) > 0 && stock <= Number(p.reorder_level);
                     return (
                       <button
                         key={p.id}

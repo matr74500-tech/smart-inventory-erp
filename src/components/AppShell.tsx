@@ -3,12 +3,7 @@ import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { pageForPath } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   LayoutDashboard,
   Boxes,
@@ -208,10 +203,28 @@ export const NAV: {
     roles: ["storekeeper"],
     group: "الإعدادات",
   },
-  { to: "/settings", label: "الإعدادات", icon: Settings, roles: ["storekeeper"], group: "الإعدادات" },
-  { to: "/backup", label: "النسخ الاحتياطي", icon: DatabaseBackup, roles: ["admin"], group: "إدارة النظام" },
+  {
+    to: "/settings",
+    label: "الإعدادات",
+    icon: Settings,
+    roles: ["storekeeper"],
+    group: "الإعدادات",
+  },
+  {
+    to: "/backup",
+    label: "النسخ الاحتياطي",
+    icon: DatabaseBackup,
+    roles: ["admin"],
+    group: "إدارة النظام",
+  },
   { to: "/users", label: "المستخدمون", icon: Users, roles: ["admin"], group: "إدارة النظام" },
-  { to: "/cleanup", label: "حذف وتنظيف البيانات", icon: Trash2, roles: ["admin"], group: "إدارة النظام" },
+  {
+    to: "/cleanup",
+    label: "حذف وتنظيف البيانات",
+    icon: Trash2,
+    roles: ["admin"],
+    group: "إدارة النظام",
+  },
 ];
 const ADMIN_ONLY = ["/users", "/backup", "/cleanup"];
 
@@ -224,8 +237,7 @@ export function AppShell({
   roles?: Role[];
   children: ReactNode;
 }) {
-  const { session, loading, username, roles: myRoles, canPage, can, signOut } =
-    useAuth();
+  const { session, loading, username, roles: myRoles, canPage, can, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -374,9 +386,7 @@ export function AppShell({
 
       <div className="no-print sticky top-0 z-30 print:hidden">
         <OfflineBanner />
-        <header
-          className="flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-md md:px-8 z-20"
-        >
+        <header className="flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-md md:px-8 z-20">
           <Button
             variant="outline"
             size="icon"

@@ -43,7 +43,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const Route = createFileRoute("/purchases")({
   head: () => ({
@@ -259,7 +266,9 @@ function PurchasesPage() {
         <div className="grid sm:grid-cols-3 gap-3">
           <Card className="p-3 shadow-sm border">
             <CardHeader className="px-0 py-1.5">
-              <CardTitle className="text-xs font-medium text-muted-foreground">المستودع المستلم</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                المستودع المستلم
+              </CardTitle>
             </CardHeader>
             <CardContent className="pb-0">
               <Select value={warehouse} onValueChange={setWh}>
@@ -268,7 +277,9 @@ function PurchasesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -301,7 +312,11 @@ function PurchasesPage() {
               className="hidden"
               onChange={(e) => importExcel(e.target.files?.[0])}
             />
-            <Button variant="outline" className="w-full h-9 text-xs" onClick={() => fileRef.current?.click()}>
+            <Button
+              variant="outline"
+              className="w-full h-9 text-xs"
+              onClick={() => fileRef.current?.click()}
+            >
               اختيار ملف
             </Button>
           </Card>
@@ -440,9 +455,7 @@ function PurchasesPage() {
                       </td>
                     )}
                     {canField("cost") && canField("quantity") && (
-                      <td className="p-3 font-bold text-right">
-                        {(l.qty * l.cost).toFixed(2)}
-                      </td>
+                      <td className="p-3 font-bold text-right">{(l.qty * l.cost).toFixed(2)}</td>
                     )}
                     <td className="p-1.5">
                       <Button
@@ -458,7 +471,10 @@ function PurchasesPage() {
                 ))}
                 {!lines.length && (
                   <tr>
-                    <td colSpan={9} className="p-12 text-center text-muted-foreground flex flex-col items-center gap-2">
+                    <td
+                      colSpan={9}
+                      className="p-12 text-center text-muted-foreground flex flex-col items-center gap-2"
+                    >
                       <Truck className="size-12 opacity-30" />
                       <p>أضف الأصناف بالمسح أو البحث أو استيراد ملف</p>
                     </td>

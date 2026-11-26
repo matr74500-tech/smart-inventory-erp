@@ -200,7 +200,7 @@ function SuppliersPage() {
             _operation_id: operationId,
             _product_id: productId,
             _supplier_id: supplierId,
-      _supplier_sku: supplierSku.trim() || "",
+            _supplier_sku: supplierSku.trim() || "",
             _last_cost: cost,
             _is_primary: primary,
           },
