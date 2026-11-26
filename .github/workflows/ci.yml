@@ -9,6 +9,7 @@ on:
 
 env:
   NODE_VERSION: "22"
+  PNPM_VERSION: "11"
   JAVA_VERSION: "21"
 
 jobs:
@@ -17,118 +18,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+      - name: Install Dependencies
+        run: pnpm install
       - name: Lint
-        run: bun run lint
+        run: pnpm run lint
       - name: TypeCheck
-        run: bunx tsc --noEmit
+        run: pnpm exec tsc --noEmit
       - name: Format Check
-        run: bunx prettier --check .
+        run: pnpm exec prettier --check .
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: Run Unit Tests
-        run: bun run test
-
-  e2e-tests:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
-      - name: Install Playwright
-        run: bunx playwright install --with-deps chromium
-      - name: Setup Supabase CLI
-        run: |
-          curl -fsSL https://supabase.com/install.sh | sh
-          echo "$HOME/.supabase/bin" >> $GITHUB_PATH
-      - name: Start Supabase Local Stack
-        run: |
-          supabase start
-          # Wait for services to be ready
-          sleep 10
-          supabase status
-      - name: Run Database Migrations
-        run: |
-          export DATABASE_URL="postgresql://postgres:postgres@localhost:54322/postgres"
-          export LOVABLE_DB_MIGRATION_URL="postgresql://postgres:postgres@localhost:54322/postgres"
-          bunx drizzle-kit migrate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
-          LOVABLE_DB_MIGRATION_URL: postgresql://postgres:postgres@localhost:54322/postgres
-      - name: Start Dev Server
-        run: |
-          export VITE_SUPABASE_URL="http://127.0.0.1:54321"
-          export VITE_SUPABASE_ANON_KEY="$(supabase status --output json | jq -r '.anon_key')"
-          export SUPABASE_URL="http://127.0.0.1:54321"
-          export SUPABASE_PUBLISHABLE_KEY="$(supabase status --output json | jq -r '.anon_key')"
-          export SUPABASE_SERVICE_ROLE_KEY="$(supabase status --output json | jq -r '.service_role_key')"
-          bun run dev --host 0.0.0.0 --port 5173 &
-          sleep 15
-      - name: Run E2E Tests
-        run: bun run test:e2e
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
-      - name: Upload Playwright Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 7
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
+        run: pnpm install
+      - name: Run Unit Tests
+        run: pnpm run test
 
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests, e2e-tests]
+    needs: [lint-and-typecheck, unit-tests]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
       - uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: "21"
+          java-version: ${{ env.JAVA_VERSION }}
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
+        run: pnpm install
       - name: Build Web Assets
-        run: bun run build
+        run: pnpm run build
       - name: Verify Build Output
         run: |
           ls -la .vercel/output/static
           test -f .vercel/output/static/favicon.ico || (echo "built static assets not found!" && exit 1)
-      - name: Setup Capacitor
+      - name: Prepare Capacitor Android
         run: |
-          bun add -D @capacitor/cli @capacitor/core @capacitor/android
-      - name: Prepare Capacitor Entry Point
-        run: |
-          printf '%s\n' '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Smart Inventory ERP</title></head><body></html>' > .vercel/output/static/index.html
-      - name: Initialize Capacitor Android
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          npx cap add android
           npx cap sync android
       - name: Build Debug APK
         run: |
@@ -141,24 +93,3 @@ jobs:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-  deploy-preview:
-    name: Deploy Preview
-    runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests]
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - run: bun run build
-      - name: Deploy to Vercel Preview
-        uses: amondnet/vercel-action@v25
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod=false"

@@ -4,8 +4,23 @@ const config: CapacitorConfig = {
   appId: "com.smartinventory.erp",
   appName: "Smart Inventory ERP",
   webDir: ".vercel/output/static",
+  bundledWebRuntime: false,
   server: {
-    url: "https://smart-inventory-erp.vercel.app",
+    androidScheme: "https",
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 0,
+    },
+    BarcodeScanner: {
+      preferBackgroundCamera: false,
+      torchEnabled: false,
+    },
+  },
+  android: {
+    allowMixedContent: false,
+    captureInput: true,
+    backgroundColor: "#0f172a",
   },
 };
 

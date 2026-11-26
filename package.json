@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:apk": "vite build && npx cap sync android && cd android && ./gradlew assembleDebug --stacktrace",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -99,6 +102,10 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor-community/barcode-scanner": "^4.0.1"
   }
 }
