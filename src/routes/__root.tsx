@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth";
 import { registerServiceWorker } from "@/lib/pwa-register";
 import { Toaster } from "@/components/ui/sonner";
+import { useUiTheme } from "@/hooks/use-ui-theme";
 
 function NotFoundComponent() {
   return (
@@ -116,9 +117,15 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <UiThemeApplier />
         <Outlet />
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+function UiThemeApplier() {
+  useUiTheme();
+  return null;
 }

@@ -96,27 +96,38 @@ function HomeShortcutsPage() {
       toast.error("ليس لديك صلاحية إدارة الإعدادات");
       return;
     }
+    const label = draft.label?.trim() || "";
+    const icon = draft.icon?.trim() || "LayoutDashboard";
+    const pagePath = draft.page_path?.trim() || "";
+    const sortOrder = Number(draft.sort_order) || 0;
+    const isVisible = draft.is_visible ?? true;
+    if (!pagePath) {
+      toast.error("اختر الصفحة");
+      return;
+    }
+    if (!label) {
+      toast.error("أدخل عنوان الاختصار");
+      return;
+    }
     setBusy(true);
     try {
       if (draft.id) {
         const { error } = await supabase.rpc("update_home_shortcut", {
           _id: draft.id,
-          _page_path: draft.page_path || "",
-          _label: draft.label || "",
-          _icon: draft.icon || "",
-          _sort_order: draft.sort_order || 0,
-          _is_visible: draft.is_visible ?? true,
+          _label: label,
+          _icon: icon,
+          _sort_order: sortOrder,
+          _is_visible: isVisible,
         });
         if (error) throw error;
         toast.success("تم تعديل الاختصار");
       } else {
         const { error } = await supabase.rpc("add_home_shortcut", {
-          _user_id: userId,
-          _page_path: draft.page_path || "",
-          _label: draft.label || "",
-          _icon: draft.icon || "",
-          _sort_order: draft.sort_order || 0,
-          _is_visible: draft.is_visible ?? true,
+          _page_path: pagePath,
+          _label: label,
+          _icon: icon,
+          _sort_order: sortOrder,
+          _is_visible: isVisible,
         });
         if (error) throw error;
         toast.success("تم إضافة الاختصار");
@@ -168,150 +179,148 @@ function HomeShortcutsPage() {
           </div>
         ) : (
           <div className="rounded-xl bg-card p-6 shadow-card space-y-4">
-            {!draft.id && shortcuts.length === 0 && (
-              <div className="p-6 text-center text-muted-foreground">
-                لا توجد اختصارات بعد. أضف اختصاراً جديداً للبدء.
+            {draft.id && (
+              <div className="space-y-2 rounded-lg border p-4">
+                <h4 className="font-semibold">تعديل اختصار</h4>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-1">
+                    <Label>الصفحة</Label>
+                    <Select value={draft.page_path || ""} disabled>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SHORTCUT_PAGES.map((p) => (
+                          <SelectItem key={p.value} value={p.value}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>العنوان</Label>
+                    <Input
+                      value={draft.label || ""}
+                      onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>الأيقونة</Label>
+                    <Select
+                      value={draft.icon || "LayoutDashboard"}
+                      onValueChange={(v) => setDraft({ ...draft, icon: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SHORTCUT_ICONS.map((i) => (
+                          <SelectItem key={i.value} value={i.value}>
+                            {i.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>ترتيب العرض</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={String(draft.sort_order || 0)}
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          sort_order: e.target.value ? Number(e.target.value) : 0,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={Boolean(draft.is_visible ?? true)}
+                    onCheckedChange={(v: boolean) => setDraft({ ...draft, is_visible: v })}
+                  />
+                  <span className="text-sm">إظهار الاختصار</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => void saveShortcut()}
+                    disabled={busy || !canAction("settings.manage")}
+                  >
+                    {busy ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Save className="size-4" />
+                    )}
+                    حفظ
+                  </Button>
+                  <Button variant="outline" onClick={() => setDraft({})} disabled={busy}>
+                    إلغاء
+                  </Button>
+                </div>
               </div>
             )}
 
-            {draft.id ||
-              (shortcuts.length > 0 && (
-                <>
-                  {draft.id && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">تعديل اختصار</h4>
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <div className="space-y-1">
-                          <Label>الصفحة</Label>
-                          <Select
-                            value={draft.page_path || ""}
-                            onValueChange={(v) => setDraft({ ...draft, page_path: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SHORTCUT_PAGES.map((p) => (
-                                <SelectItem key={p.value} value={p.value}>
-                                  {p.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+            {!draft.id && (
+              <div className="space-y-2">
+                <h4 className="font-semibold">الاختصارات الحالية</h4>
+                {shortcuts.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground">
+                    لا توجد اختصارات محفوظة. اضغط «إضافة اختصار» لإنشاء واحد جديد.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {shortcuts.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between gap-3 p-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <span className="text-muted-foreground text-xs shrink-0">
+                            {s.sort_order}
+                          </span>
+                          <span className="font-medium truncate">{s.label}</span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {s.page_path}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">{s.icon}</span>
                         </div>
-                        <div className="space-y-1">
-                          <Label>العنوان</Label>
-                          <Input
-                            value={draft.label || ""}
-                            onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>الأيقونة</Label>
-                          <Select
-                            value={draft.icon || ""}
-                            onValueChange={(v) => setDraft({ ...draft, icon: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SHORTCUT_ICONS.map((i) => (
-                                <SelectItem key={i.value} value={i.value}>
-                                  {i.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label>ترتيب العرض</Label>
-                          <Input
-                            type="number"
-                            step="1"
-                            value={String(draft.sort_order || 0)}
-                            onChange={(e) =>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs">
+                            {s.is_visible ? "مفعل" : "مخفي"}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() =>
                               setDraft({
-                                ...draft,
-                                sort_order: e.target.value ? Number(e.target.value) : 0,
+                                id: s.id,
+                                page_path: s.page_path,
+                                label: s.label,
+                                icon: s.icon,
+                                sort_order: s.sort_order,
+                                is_visible: s.is_visible,
                               })
                             }
-                          />
+                            disabled={busy || !canAction("settings.manage")}
+                          >
+                            <Move className="size-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            onClick={() => void deleteShortcut(s.id)}
+                            disabled={busy}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={Boolean(draft.is_visible ?? true)}
-                          onCheckedChange={(v: boolean) => setDraft({ ...draft, is_visible: v })}
-                        />
-                        <span className="text-sm">إظهار الاختصار</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => void saveShortcut()}
-                          disabled={busy || !canAction("settings.manage")}
-                        >
-                          {busy ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Save className="size-4" />
-                          )}
-                          حفظ
-                        </Button>
-                        <Button variant="outline" onClick={() => setDraft({})} disabled={busy}>
-                          إلغاء
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <h4 className="font-semibold">الاختصارات الحالية</h4>
-                    <div className="divide-y">
-                      {shortcuts.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between gap-3 p-3">
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="text-muted-foreground text-xs">{s.sort_order}</span>
-                            <span className="font-medium">{s.label}</span>
-                            <span className="text-xs text-muted-foreground">{s.page_path}</span>
-                            <span className="text-xs text-muted-foreground">{s.icon}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs">
-                              {s.is_visible ? "مفعل" : "مخفي"}
-                            </span>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={() =>
-                                setDraft({
-                                  id: s.id,
-                                  page_path: s.page_path,
-                                  label: s.label,
-                                  icon: s.icon,
-                                  sort_order: s.sort_order,
-                                  is_visible: s.is_visible,
-                                })
-                              }
-                              disabled={busy || !canAction("settings.manage")}
-                            >
-                              <Move className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="destructive"
-                              onClick={() => void deleteShortcut(s.id)}
-                              disabled={busy}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                </>
-              ))}
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -15,6 +15,13 @@ import {
   TrendingUp,
   DollarSign,
   Users,
+  Settings,
+  Tags,
+  Bell,
+  Move,
+  Wallet,
+  CreditCard,
+  RotateCcw,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useInventory } from "@/hooks/use-inventory";
@@ -32,6 +39,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHomeShortcuts } from "@/hooks/use-home-shortcuts";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -91,7 +99,35 @@ const TILES = [
   },
 ];
 
-const SHORTCUTS = [
+const SHORTCUT_ICON_MAP: Record<string, typeof Receipt> = {
+  ShoppingCart,
+  Boxes,
+  Users,
+  Wallet,
+  CreditCard,
+  FileText,
+  Tags,
+  Barcode: Tags,
+  Bell,
+  Settings,
+  Move,
+  Truck,
+  ClipboardCheck,
+  ArrowLeftRight,
+  Receipt,
+  RotateCcw,
+};
+
+const DEFAULT_SHORTCUTS: Array<{
+  key: string;
+  label: string;
+  desc: string;
+  to: string;
+  search: Record<string, unknown>;
+  page: string;
+  icon: string;
+  tone: string;
+}> = [
   {
     key: "1",
     label: "سند قبض",
@@ -99,7 +135,7 @@ const SHORTCUTS = [
     to: "/customers",
     search: { voucher: "receipt" },
     page: "customers",
-    icon: Receipt,
+    icon: "Receipt",
     tone: "text-success",
   },
   {
@@ -109,7 +145,7 @@ const SHORTCUTS = [
     to: "/sales",
     search: { view: "invoice" },
     page: "sales",
-    icon: FileText,
+    icon: "FileText",
     tone: "text-primary",
   },
   {
@@ -119,7 +155,7 @@ const SHORTCUTS = [
     to: "/customers",
     search: { voucher: "payment" },
     page: "customers",
-    icon: Receipt,
+    icon: "Receipt",
     tone: "text-destructive",
   },
   {
@@ -129,7 +165,7 @@ const SHORTCUTS = [
     to: "/purchase_orders",
     search: {},
     page: "purchase_orders",
-    icon: ShoppingCart,
+    icon: "ShoppingCart",
     tone: "text-primary",
   },
   {
@@ -139,7 +175,7 @@ const SHORTCUTS = [
     to: "/sales",
     search: { view: "pos" },
     page: "sales",
-    icon: ShoppingCart,
+    icon: "ShoppingCart",
     tone: "text-success",
   },
   {
@@ -149,7 +185,7 @@ const SHORTCUTS = [
     to: "/inventory",
     search: {},
     page: "inventory",
-    icon: Boxes,
+    icon: "Boxes",
     tone: "text-primary",
   },
   {
@@ -159,10 +195,10 @@ const SHORTCUTS = [
     to: "/reorders",
     search: {},
     page: "reorders",
-    icon: Truck,
+    icon: "Truck",
     tone: "text-success",
   },
-] as const;
+];
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -181,6 +217,7 @@ function Dashboard() {
   const { products, warehouses, reorders, qty } = useInventory();
   const { canPage, canField } = useAuth();
   const navigate = useNavigate();
+  const { shortcuts: savedShortcuts } = useHomeShortcuts();
   const low = products.filter(
     (p) => Number(p.reorder_level) > 0 && qty(p.id) <= Number(p.reorder_level),
   );
@@ -226,7 +263,29 @@ function Dashboard() {
     },
   ];
 
-  const visibleShortcuts = useMemo(() => SHORTCUTS.filter((s) => canPage(s.page)), [canPage]);
+  const builtShortcuts = useMemo(() => {
+    if (savedShortcuts.length > 0) {
+      return savedShortcuts.map((s, idx) => ({
+        key: String(idx + 1),
+        label: s.label,
+        desc: `اختصار إلى ${s.label}`,
+        to: s.page_path,
+        search: {},
+        page: pageForPath(s.page_path),
+        icon: SHORTCUT_ICON_MAP[s.icon] ?? Boxes,
+        tone: "text-primary",
+      }));
+    }
+    return DEFAULT_SHORTCUTS.map((s) => ({
+      ...s,
+      icon: SHORTCUT_ICON_MAP[s.icon] ?? Boxes,
+    }));
+  }, [savedShortcuts]);
+
+  const visibleShortcuts = useMemo(
+    () => builtShortcuts.filter((s) => canPage(s.page)),
+    [builtShortcuts, canPage],
+  );
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -235,7 +294,7 @@ function Dashboard() {
       const shortcut = visibleShortcuts.find((s) => s.key === event.key);
       if (!shortcut) return;
       event.preventDefault();
-      void navigate({ to: shortcut.to as never, search: shortcut.search as never });
+      void navigate({ to: shortcut.to as never, search: (shortcut.search || {}) as never });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
