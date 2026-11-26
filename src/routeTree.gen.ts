@@ -43,6 +43,7 @@ import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as Ui_themeRouteImport } from './routes/ui_theme'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as Account_statementsRouteImport } from './routes/account_statements'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -213,6 +214,11 @@ const UsersRoute = UsersRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Account_statementsRoute = Account_statementsRouteImport.update({
+  id: '/account_statements',
+  path: '/account_statements',
   getParentRoute: () => rootRouteImport,
 } as any)
 

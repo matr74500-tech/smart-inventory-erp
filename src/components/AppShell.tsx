@@ -36,6 +36,7 @@ import {
   Clock,
   ChevronRight,
   User,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -89,6 +90,13 @@ export const NAV: {
     to: "/customers",
     label: "العملاء",
     icon: Users,
+    roles: ["storekeeper", "cashier"],
+    group: "المبيعات",
+  },
+  {
+    to: "/account_statements",
+    label: "كشوفات الحسابات",
+    icon: BookOpen,
     roles: ["storekeeper", "cashier"],
     group: "المبيعات",
   },
