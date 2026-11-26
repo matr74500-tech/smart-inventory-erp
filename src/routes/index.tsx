@@ -303,19 +303,27 @@ function Dashboard() {
 
   return (
     <AppShell title="لوحة التحكم">
-      <div className="space-y-6">
-        {/* Welcome header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">لوحة التحكم</h1>
-            <p className="text-muted-foreground mt-1">
-              نظرة سريعة على حالة المخزون والعمليات الجارية اليوم.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="px-3 py-1.5">
-              النظام يعمل بشكل طبيعي
-            </Badge>
+      <div className="space-y-8">
+        <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-card via-card to-secondary/40 p-6 shadow-[var(--shadow-elevated)] md:p-8">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-12 -right-8 h-48 w-48 rounded-full bg-accent/20 blur-2xl" />
+          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/80">
+                Smart Inventory ERP
+              </p>
+              <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground md:text-3xl">
+                لوحة التحكم
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
+                متابعة فورية للمخزون والطلبات والتنبيهات مع اختصارات سريعة لعمليات اليوم.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border-0 bg-emerald-100 px-3 py-1.5 text-emerald-800 shadow-sm hover:bg-emerald-100">
+                النظام يعمل بشكل طبيعي
+              </Badge>
+            </div>
           </div>
         </div>
 
@@ -429,14 +437,14 @@ function Dashboard() {
                     </thead>
                     <tbody>
                       {low.slice(0, 8).map((p) => (
-                        <tr key={p.id} className="border-b border-b">
+                        <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/30">
                           <td className="py-3 px-4 font-medium">{p.name}</td>
                           <td className="py-3 px-4 text-right font-mono">{qty(p.id)}</td>
                           <td className="py-3 px-4 text-right font-mono text-muted-foreground">
                             {Number(p.reorder_level)}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <Badge variant="destructive" className="text-xs px-2 py-1">
+                            <Badge className="border-0 bg-destructive/10 px-2 py-1 text-xs text-destructive hover:bg-destructive/15">
                               ناقص
                             </Badge>
                           </td>
