@@ -47,7 +47,7 @@ function StocktakePage() {
   const [scannedId, setScannedId] = useState<string | null>(null);
   const scannedRef = useRef<string | null>(null);
   const quantityRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const warehouse = wh || warehouses[0]?.id || "";
+  const warehouse = wh || warehouses[0]?.id || undefined;
   const list = useMemo(
     () => products.filter((p) => matchesSearch([p.name, p.barcode], q)),
     [products, q],
@@ -56,7 +56,7 @@ function StocktakePage() {
 
   async function save(productId: string) {
     if (!canAction("stocktake.adjust")) return;
-    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
+    if (!warehouse) {
       toast.error("الرجاء اختيار المستودع");
       return;
     }
@@ -127,7 +127,7 @@ function StocktakePage() {
   const pending = Object.entries(drafts).filter(([, v]) => v !== "");
   async function approveAll() {
     if (!canAction("stocktake.adjust")) return;
-    if (!warehouse || warehouse === "undefined" || warehouse === "null") {
+    if (!warehouse) {
       toast.error("الرجاء اختيار المستودع");
       return;
     }

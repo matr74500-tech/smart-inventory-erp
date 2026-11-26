@@ -86,7 +86,7 @@ function SalesPage() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showTierColumn, setShowTierColumn] = useState(true);
-  const [warehouse, setWarehouse] = useState(() => warehouses[0]?.id || "");
+  const [warehouse, setWarehouse] = useState(() => warehouses[0]?.id || undefined);
   const [defaultTier, setDefaultTier] = useState<PriceKey>("price");
   const [currency, setCurrency] = useState("YER");
   const [paymentMethod, setPaymentMethod] = useState("نقدي YER");
