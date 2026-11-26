@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { getPrivateSnapshot, savePrivateSnapshot } from "@/lib/offline/inventory-cache";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/suppliers")({
   head: () => ({ meta: [{ title: "إدارة الموردين | نظام المخزون الذكي" }] }),
@@ -35,6 +36,7 @@ function SuppliersPage() {
   const [productSuppliers, setProductSuppliers] = useState<ProductSupplier[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [supplierNotes, setSupplierNotes] = useState("");
@@ -105,6 +107,7 @@ function SuppliersPage() {
       _operation_id: operationId,
       _id: stableId,
       _name: name.trim(),
+      _code: code.trim() || null,
       _phone: phone.trim(),
       _address: address.trim(),
       _notes: supplierNotes.trim() || "",
@@ -114,6 +117,7 @@ function SuppliersPage() {
       const legacy = await supabase.rpc("save_supplier", {
         _id: editingId ?? crypto.randomUUID(),
         _name: name.trim(),
+        _code: code.trim() || null,
         _phone: phone.trim(),
         _address: address.trim(),
         _notes: supplierNotes.trim() || "",
@@ -161,6 +165,7 @@ function SuppliersPage() {
     }
     setEditingId(null);
     setName("");
+    setCode("");
     setPhone("");
     setAddress("");
     setSupplierNotes("");
@@ -249,6 +254,16 @@ function SuppliersPage() {
                 required
               />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="supplier-code">الرمز الخاص للمورد (اختياري)</Label>
+              <Input
+                id="supplier-code"
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                placeholder="مثال: S-1001"
+                dir="ltr"
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="supplier-phone">الهاتف</Label>
@@ -300,7 +315,14 @@ function SuppliersPage() {
             {suppliers.map((supplier) => (
               <div key={supplier.id} className="flex items-center gap-2 py-3">
                 <div className="flex-1">
-                  <strong>{supplier.name}</strong>
+                  <div className="flex items-center gap-2">
+                    <strong>{supplier.name}</strong>
+                    {supplier.code && (
+                      <Badge variant="outline" className="text-xs px-2 py-1">
+                        {supplier.code}
+                      </Badge>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {supplier.phone} · {supplier.address}
                   </div>
@@ -315,6 +337,7 @@ function SuppliersPage() {
                     onClick={() => {
                       setEditingId(supplier.id);
                       setName(supplier.name);
+                      setCode(supplier.code ?? "");
                       setPhone(supplier.phone);
                       setAddress(supplier.address);
                       setSupplierNotes(supplier.notes ?? "");

@@ -357,6 +357,7 @@ export type Database = {
           active: boolean;
           address: string;
           balance_yer: number;
+          code?: string | null;
           created_at: string;
           credit_limit_yer: number;
           customer_type: string;
@@ -372,6 +373,7 @@ export type Database = {
           active?: boolean;
           address?: string;
           balance_yer?: number;
+          code?: string | null;
           created_at?: string;
           credit_limit_yer?: number;
           customer_type?: string;
@@ -387,6 +389,7 @@ export type Database = {
           active?: boolean;
           address?: string;
           balance_yer?: number;
+          code?: string | null;
           created_at?: string;
           credit_limit_yer?: number;
           customer_type?: string;
@@ -1985,6 +1988,7 @@ export type Database = {
         Row: {
           active: boolean;
           address: string;
+          code?: string | null;
           created_at: string;
           id: string;
           name: string;
@@ -1996,6 +2000,7 @@ export type Database = {
         Insert: {
           active?: boolean;
           address?: string;
+          code?: string | null;
           created_at?: string;
           id?: string;
           name: string;
@@ -2007,6 +2012,7 @@ export type Database = {
         Update: {
           active?: boolean;
           address?: string;
+          code?: string | null;
           created_at?: string;
           id?: string;
           name?: string;
