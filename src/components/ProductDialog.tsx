@@ -552,7 +552,13 @@ function ProductForm({
           });
           if (legacy.error) return `تعذر حفظ الأرصدة الافتتاحية: ${legacy.error.message}`;
         } else if (error) {
-          return `تعذر حفظ الأرصدة الافتتاحية: ${error.message}`;
+          const msg = error.message ?? String(error);
+          // الرصيد الافتتاحي قد يكون مسجلاً مسبقاً — لا نعتبره خطأً فاتحاً
+          if (/isnot unique|already exists|23505|duplicate/i.test(msg)) {
+            console.warn("Opening stock already exists, skipping:", msg);
+          } else {
+            return `تعذر حفظ الأرصدة الافتتاحية: ${msg}`;
+          }
         }
       }
       if (shouldSaveUnits) {

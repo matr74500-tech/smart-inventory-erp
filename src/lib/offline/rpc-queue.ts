@@ -49,11 +49,40 @@ export const RPC_BACKOFF_BASE_MS = 4000;
 export const RPC_BACKOFF_MAX_MS = 5 * 60 * 1000;
 
 export async function getAllowedRpcNames(): Promise<Set<string>> {
-  const { data } = await supabase
-    .from("offline_rpc_allowlist" as never)
-    .select("rpc_name")
-    .eq("allowed", true);
-  return new Set((data ?? []).map((row) => String((row as Record<string, unknown>)["rpc_name"])));
+  const FALLBACK_ALLOWED = new Set([
+    "save_payment_plan",
+    "save_sale_draft_offline",
+    "save_purchase_order_draft_offline",
+    "post_sale_offline",
+    "post_return_offline",
+    "post_purchase_offline",
+    "set_stock_offline",
+    "set_stock_batch_offline",
+    "transfer_shelf_stock_offline",
+    "close_daily_cash_offline",
+    "save_voucher_draft_offline",
+    "post_voucher_offline",
+    "save_customer_offline",
+    "save_supplier_offline",
+    "save_product_supplier_offline",
+    "save_product_offline",
+    "save_product_units_offline",
+    "save_product_opening_balances_offline",
+    "save_product_suppliers_offline",
+    "save_catalog_setting_offline",
+    "upload_product_image_offline",
+    "record_general_expense_offline",
+  ]);
+  try {
+    const { data, error } = await supabase
+      .from("offline_rpc_allowlist" as never)
+      .select("rpc_name")
+      .eq("allowed", true);
+    if (error || !data || data.length === 0) return FALLBACK_ALLOWED;
+    return new Set((data ?? []).map((row) => String((row as Record<string, unknown>)["rpc_name"])));
+  } catch {
+    return FALLBACK_ALLOWED;
+  }
 }
 
 async function assertAllowedRpc(name: string, allowed: Set<string> | undefined) {

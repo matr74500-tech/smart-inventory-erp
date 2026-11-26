@@ -198,6 +198,16 @@ const DEFAULT_SHORTCUTS: Array<{
     icon: "Truck",
     tone: "text-success",
   },
+  {
+    key: "8",
+    label: "مصروف جديد",
+    desc: "تسجيل مصروف جديد",
+    to: "/expenses",
+    search: {},
+    page: "expenses",
+    icon: "CreditCard",
+    tone: "text-destructive",
+  },
 ];
 
 function isTypingTarget(target: EventTarget | null): boolean {
