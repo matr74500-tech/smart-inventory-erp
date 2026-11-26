@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '22'
-  JAVA_VERSION: '21'
+  NODE_VERSION: "22"
+  JAVA_VERSION: "21"
 
 jobs:
   lint-and-typecheck:
@@ -108,8 +108,8 @@ jobs:
           bun-version: latest
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
       - name: Install Dependencies
         run: bun install --frozen-lockfile
       - name: Build Web Assets
@@ -161,4 +161,4 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod=false'
+          vercel-args: "--prod=false"

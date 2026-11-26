@@ -33,7 +33,6 @@ dist-ssr
 *.sw?
 supabase/.temp/
 test-results/
+playwright-report/
 .aider*
-.env
-.env
 .env
