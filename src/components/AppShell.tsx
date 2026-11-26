@@ -43,6 +43,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { LowStockWatcher } from "@/components/LowStockWatcher";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { OfflineQueue } from "@/components/OfflineQueue";
 
 export const NAV: {
   to: string;
@@ -424,6 +425,7 @@ export function AppShell({
       </div>
 
       <main className="mx-auto w-full max-w-7xl p-4 md:p-6 print:p-0 print:max-w-none min-h-[calc(100vh-4rem)]">
+        <OfflineQueue />
         {canPage("alerts") && <LowStockWatcher />}
         {searchOpen && <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />}
         {allowed ? (
