@@ -12,16 +12,14 @@ import {
   ShoppingCart,
   FileText,
   Receipt,
-  TrendingUp,
-  DollarSign,
   Users,
-  Settings,
   Tags,
   Bell,
   Move,
   Wallet,
   CreditCard,
   RotateCcw,
+  Settings,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useInventory } from "@/hooks/use-inventory";
