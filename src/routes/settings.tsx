@@ -361,8 +361,8 @@ function CurrenciesEditor({
   return (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-muted-foreground">
-        سعر الصرف هو عدد الريالات اليمنية مقابل وحدة واحدة من العملة. كل تعديل يُحفظ كسجل جديد؛
-        أسعار المعاملات السابقة لا تتغير.
+        سعر الصرف هو عدد الريالات اليمنية مقابل وحدة واحدة من العملة. كل تعديل يُحفظ كسجل جديد؛ أسعار
+        المعاملات السابقة لا تتغير.
       </p>
       <form
         onSubmit={addCurrency}
