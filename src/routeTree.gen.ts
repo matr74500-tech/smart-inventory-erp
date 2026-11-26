@@ -351,6 +351,7 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
+    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -387,6 +388,7 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
+    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -423,6 +425,7 @@ export interface FileRouteTypes {
     | '/movements'
     | '/prices'
     | '/profile'
+    | '/account_statements'
     | '/purchase_orders'
     | '/purchases'
     | '/reorders'
@@ -477,6 +480,7 @@ export interface RootRouteChildren {
   Ui_themeRoute: typeof Ui_themeRoute
   UsersRoute: typeof UsersRoute
   ProfileRoute: typeof ProfileRoute
+  Account_statementsRoute: typeof Account_statementsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -724,6 +728,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_statements': {
+      id: '/account_statements'
+      path: '/account_statements'
+      fullPath: '/account_statements'
+      preLoaderRoute: typeof Account_statementsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

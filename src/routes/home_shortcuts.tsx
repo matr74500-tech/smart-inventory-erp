@@ -32,13 +32,21 @@ const SHORTCUT_PAGES: { value: string; label: string }[] = [
   { value: "/sales", label: "المبيعات" },
   { value: "/inventory", label: "الأصناف والمخزون" },
   { value: "/purchases", label: "فاتورة مشتريات" },
+  { value: "/purchase_orders", label: "أوامر الشراء" },
+  { value: "/suppliers", label: "الموردون" },
   { value: "/customers", label: "العملاء" },
+  { value: "/account_statements", label: "كشوفات الحسابات" },
   { value: "/cash", label: "الصندوق والإقفال" },
   { value: "/expenses", label: "المصروفات العامة" },
   { value: "/returns", label: "المرتجعات والمردودات" },
   { value: "/reports", label: "التقارير" },
-  { value: "/settings", label: "الإعدادات" },
+  { value: "/stocktake", label: "الجرد والإدخال" },
+  { value: "/transfers", label: "التحويلات" },
+  { value: "/reorders", label: "التوريد" },
+  { value: "/alerts", label: "تنبيهات المخزون" },
   { value: "/labels", label: "ملصقات الباركود" },
+  { value: "/catalog", label: "كتالوج PDF" },
+  { value: "/settings", label: "الإعدادات" },
 ];
 
 const SHORTCUT_ICONS: { value: string; label: string }[] = [

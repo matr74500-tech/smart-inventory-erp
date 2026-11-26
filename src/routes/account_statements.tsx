@@ -48,7 +48,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { enqueueRpc, isTransientNetworkError } from "@/lib/offline/rpc-queue";
 import { writeSheet } from "@/lib/inventory-utils";
-export const Route = createFileRoute("/account_statements" as never)({
+import { buildWhatsAppUrl, shareTextOrFile } from "@/lib/share";
+export const Route = createFileRoute("/account_statements")({
   head: () => ({
     meta: [
       { title: "حسابات العملاء والموردين وكشوفات الحساب | نظام المخزون الذكي" },
@@ -60,7 +61,6 @@ export const Route = createFileRoute("/account_statements" as never)({
   }),
   component: AccountStatementsPage,
 });
-
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 type SupplierRow = Database["public"]["Tables"]["suppliers"]["Row"];
 type SalesInvoiceRow = Database["public"]["Tables"]["sales_invoices"]["Row"];
@@ -773,26 +773,20 @@ function AccountStatementsPage() {
     const text = buildShareText();
     if (!text) return;
     const phoneRaw = tab === "customers" ? selectedCustomer?.phone : selectedSupplier?.phone;
-    const phone = safeStr(phoneRaw).replace(/[^\d+]/g, "");
-    const url = phone
-      ? `https://wa.me/${phone.startsWith("+") ? phone.slice(1) : phone}?text=${encodeURIComponent(text)}`
-      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+    const url = buildWhatsAppUrl(text, safeStr(phoneRaw));
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const shareNative = async () => {
     const text = buildShareText();
     if (!text) return;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "كشف حساب", text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast.success("تم نسخ الكشف كنص");
-      }
-    } catch {
-      /* cancelled */
-    }
+    const title =
+      tab === "customers"
+        ? `كشف حساب - ${selectedCustomer?.name ?? ""}`
+        : `كشف حساب مورد - ${selectedSupplier?.name ?? ""}`;
+    const res = await shareTextOrFile({ title, text });
+    if (res === "copied") toast.success("تم نسخ الكشف كنص");
+    if (res === "shared") toast.success("تمت المشاركة");
   };
 
   return (
