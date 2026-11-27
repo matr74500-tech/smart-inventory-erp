@@ -18,6 +18,7 @@ import { AppShell } from "@/components/AppShell";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useInventory, type Product } from "@/hooks/use-inventory";
 import { useAuth } from "@/lib/auth";
+import { useUiTheme } from "@/hooks/use-ui-theme";
 import { findByCode, PRICE_TIERS, type PriceKey } from "@/lib/inventory-utils";
 import { isContactPickerSupported, pickPhoneContact } from "@/lib/contacts";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +108,7 @@ type AppSettingsRow = Tables<"app_settings">;
 
 function SalesPage() {
   const { canAction } = useAuth();
+  const { setting: uiSetting } = useUiTheme();
   const { products, warehouses, qty, reload, currencies, exchangeRates, settings } = useInventory();
   const { view } = Route.useSearch();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -564,7 +566,9 @@ function SalesPage() {
       Math.max(0, i.qty * i.price - (Number(i.lineDiscountYER) || 0) + (Number(i.lineTaxYER) || 0)),
     0,
   );
-  const discountVal = Number(discount) || 0;
+  const rawDiscountVal = Number(discount) || 0;
+  const maxDiscPct = Number(uiSetting?.max_discount_percent ?? 100);
+  const discountVal = Math.min(rawDiscountVal, Number.isFinite(maxDiscPct) ? (maxDiscPct / 100) * subtotal : rawDiscountVal);
   const taxVal = Number(tax) || 0;
   const netTotal = Math.max(0, subtotal - discountVal + taxVal);
   const activeCurrencies = currencies.filter((item) => item.active);
@@ -1499,7 +1503,11 @@ function SalesPage() {
                       value={discount}
                       onChange={(e) => setDiscount(e.target.value)}
                       placeholder="0"
+                      max={String(((Number(uiSetting?.max_discount_percent ?? 100) / 100) * Math.max(0, subtotal)).toFixed(2))}
                     />
+                    {Number(uiSetting?.max_discount_percent ?? 100) < 100 && subtotal > 0 && Number(discount || 0) > (Number(uiSetting?.max_discount_percent ?? 100) / 100) * subtotal && (
+                      <p className="text-[10px] text-destructive">الحد الأقصى للخصم {Number(uiSetting?.max_discount_percent ?? 100)}% من المجموع الفرعي.</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label>الضريبة</Label>

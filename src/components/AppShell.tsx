@@ -46,6 +46,7 @@ import { LowStockWatcher } from "@/components/LowStockWatcher";
 import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { OfflineQueue } from "@/components/OfflineQueue";
+import { useUiTheme } from "@/hooks/use-ui-theme";
 
 export const NAV: {
   to: string;
@@ -303,6 +304,19 @@ export function AppShell({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navOpen]);
+
+  const { setting: uiSetting } = useUiTheme();
+  useEffect(() => {
+    if (loading || !session) return;
+    const start = uiSetting?.start_screen_path;
+    if (!start || start === "/" || start === location.pathname) return;
+    // only redirect when landing on dashboard root
+    if (location.pathname !== "/") return;
+    const page = pageForPath(start);
+    if (!canPage(page)) return;
+    if (ADMIN_ONLY.includes(start) && !can("admin")) return;
+    void navigate({ to: start as never });
+  }, [loading, session, uiSetting?.start_screen_path, location.pathname, canPage, can, navigate]);
 
   if (loading || !session) {
     return (
