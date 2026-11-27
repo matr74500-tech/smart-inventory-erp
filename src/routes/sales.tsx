@@ -82,7 +82,14 @@ type SalesSettingsRow = {
   is_warehouse_required: boolean;
   apply_to_quick_sales: boolean;
   apply_to_new_invoice: boolean;
+  default_currency_code?: string | null;
+  is_currency_required?: boolean;
+  default_payment_method?: string | null;
+  is_payment_method_required?: boolean;
+  auto_add_on_scan?: boolean;
 };
+type SalesDefaultRow = Tables<"sales_defaults">;
+type ScannerSettingRow = Tables<"scanner_settings">;
 
 function SalesPage() {
   const { canAction } = useAuth();
@@ -121,7 +128,9 @@ function SalesPage() {
   const savingRef = useRef(false);
   const postingRef = useRef(false);
   const [salesSettings, setSalesSettings] = useState<SalesSettingsRow | null>(null);
-  const salesSettingsAppliedRef = useRef(false);
+  const [salesDefault, setSalesDefault] = useState<SalesDefaultRow | null>(null);
+  const [scannerSetting, setScannerSetting] = useState<ScannerSettingRow | null>(null);
+  const salesDefaultsAppliedRef = useRef(false);
 
   const paymentMethods = (settings?.payment_methods as string[]) ?? [
     "نقدي YER",
@@ -178,22 +187,120 @@ function SalesPage() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const loadSalesDefaults = async () => {
+      const pageType = view === "invoice" ? "sales_invoice" : "quick_sales";
+      const { data, error } = await supabase
+        .from("sales_defaults")
+        .select("*")
+        .eq("page_type", pageType)
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setSalesDefault(null);
+        return;
+      }
+      setSalesDefault((data as SalesDefaultRow) ?? null);
+    };
+    void loadSalesDefaults();
+    const ch = supabase
+      .channel("sales-defaults-page")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sales_defaults" },
+        () => void loadSalesDefaults(),
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(ch);
+    };
+  }, [view]);
+
+  useEffect(() => {
+    let active = true;
+    const loadScanner = async () => {
+      const { data, error } = await supabase
+        .from("scanner_settings")
+        .select("*")
+        .eq("page_path", "/sales")
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setScannerSetting(null);
+        return;
+      }
+      setScannerSetting((data as ScannerSettingRow) ?? null);
+    };
+    void loadScanner();
+    const ch = supabase
+      .channel("scanner-settings-sales")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scanner_settings" },
+        () => void loadScanner(),
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(ch);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!salesSettings) return;
     const isQuick = view !== "invoice";
     const allowed =
       (isQuick && salesSettings.apply_to_quick_sales) ||
       (!isQuick && salesSettings.apply_to_new_invoice);
     if (!allowed) return;
-    if (salesSettingsAppliedRef.current) return;
-    salesSettingsAppliedRef.current = true;
     if (salesSettings.default_warehouse_id) {
       const exists = warehouses.some((w) => w.id === salesSettings.default_warehouse_id);
-      if (exists) setWarehouse(salesSettings.default_warehouse_id);
+      if (exists) setWarehouse((prev) => prev ?? salesSettings.default_warehouse_id ?? undefined);
     }
     if (salesSettings.default_customer_id && !customerId) {
       setCustomerId(salesSettings.default_customer_id);
     }
-  }, [salesSettings, view, warehouses, customerId]);
+    if (
+      salesSettings.default_currency_code &&
+      currencies.some((c) => c.code === salesSettings.default_currency_code && c.active)
+    ) {
+      setCurrency((prev) =>
+        prev === "YER" && salesSettings.default_currency_code
+          ? salesSettings.default_currency_code
+          : prev,
+      );
+    }
+    if (
+      salesSettings.default_payment_method &&
+      paymentMethods.includes(salesSettings.default_payment_method)
+    ) {
+      setPaymentMethod((prev) =>
+        prev === "نقدي YER" ? salesSettings.default_payment_method! : prev,
+      );
+    }
+  }, [salesSettings, view, warehouses, customerId, currencies, paymentMethods]);
+
+  useEffect(() => {
+    if (!salesDefault) return;
+    if (salesDefault.default_tier) setDefaultTier(salesDefault.default_tier as PriceKey);
+    if (
+      salesDefault.default_currency_code &&
+      currencies.some((c) => c.code === salesDefault.default_currency_code && c.active)
+    ) {
+      setCurrency(salesDefault.default_currency_code);
+    }
+    if (
+      salesDefault.default_payment_method &&
+      paymentMethods.includes(salesDefault.default_payment_method)
+    ) {
+      setPaymentMethod(salesDefault.default_payment_method);
+    }
+    setDiscount(String(salesDefault.default_discount ?? 0));
+    setTax(String(salesDefault.default_tax ?? 0));
+  }, [salesDefault, currencies, paymentMethods]);
 
   const refreshDrafts = useCallback(async () => {
     const { data, error } = await supabase
@@ -276,15 +383,81 @@ function SalesPage() {
 
   const onScan = useCallback(
     (code: string) => {
-      const p = findByCode(products, code);
-      if (p) {
-        addToCart(p, 1, defaultTier);
-        toast.success(`تمت الإضافة: ${p.name} (+1)`);
-      } else {
-        toast.error("الصنف غير موجود بالباركود المدخل");
+      const trimmed = code.trim();
+      if (!trimmed) return;
+      const p = findByCode(products, trimmed);
+      const action = scannerSetting?.scanner_action ?? "add_to_cart";
+      const autoExec = scannerSetting?.auto_execute !== false;
+      const autoAddFromDefaults =
+        (salesDefault as (SalesDefaultRow & { auto_add_on_scan?: boolean }) | null)
+          ?.auto_add_on_scan ??
+        salesSettings?.auto_add_on_scan ??
+        true;
+      if (scannerSetting?.beep_on_scan) {
+        try {
+          const ctx = new (
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+          )();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 880;
+          gain.gain.value = 0.08;
+          osc.start();
+          osc.stop(ctx.currentTime + 0.08);
+        } catch {
+          /* ignore */
+        }
       }
+      if (scannerSetting?.vibrate_on_scan && typeof navigator.vibrate === "function") {
+        try {
+          navigator.vibrate(60);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (action === "none") {
+        toast.message("ماسح الباركود معطّل في هذه الصفحة من الإعدادات");
+        return;
+      }
+      if (action === "open_page") {
+        const target = scannerSetting?.target_page;
+        if (target) window.location.href = target;
+        else toast.error("لم يتم تحديد صفحة الهدف في إعدادات الماسح");
+        return;
+      }
+      if (!p) {
+        toast.error("الصنف غير موجود بالباركود المدخل");
+        return;
+      }
+      if (action === "find_product" || action === "search_invoice") {
+        setQ(p.name);
+        setShowSearchDropdown(false);
+        toast.success(`تم العثور على: ${p.name}`);
+        return;
+      }
+      // add_to_cart (default)
+      if (!autoExec) {
+        setQ(p.name);
+        toast.message("تم المسح (التنفيذ التلقائي معطّل). أضف يدوياً من القائمة.");
+        return;
+      }
+      if (!autoAddFromDefaults) {
+        setQ(p.name);
+        toast.message("الإضافة التلقائية بالمسح معطّلة من إعدادات المبيعات. أضف يدوياً.");
+        return;
+      }
+      const stock = qty(p.id);
+      if (!stock || stock <= 0) {
+        toast.error(`لا يوجد رصيد كافٍ للصنف: ${p.name}`);
+        return;
+      }
+      addToCart(p, 1, defaultTier);
+      toast.success(`تمت الإضافة: ${p.name} (+1)`);
     },
-    [products, addToCart, defaultTier],
+    [products, addToCart, defaultTier, scannerSetting, salesDefault, salesSettings, qty],
   );
 
   function updateCartItem(index: number, patch: Partial<CartItem>) {
@@ -318,11 +491,6 @@ function SalesPage() {
     try {
       if (!cart.length) {
         toast.error("السلة فارغة");
-        return null;
-      }
-
-      if (rateMissing) {
-        toast.error("لا يوجد سعر صرف صالح لهذه العملة");
         return null;
       }
 
@@ -371,6 +539,32 @@ function SalesPage() {
             effectiveWarehouseId = salesSettings.default_warehouse_id;
           }
         }
+        if (salesSettings.is_currency_required) {
+          const hasCur = activeCurrencies.some((c) => c.code === currency);
+          if (!hasCur) {
+            toast.error("يجب اختيار العملة وفق إعدادات المبيعات");
+            return null;
+          }
+          if (
+            salesSettings.default_currency_code &&
+            currencies.some((c) => c.code === salesSettings.default_currency_code && c.active)
+          ) {
+            // keep user choice if valid; no override
+          }
+        } else if (
+          salesSettings.default_currency_code &&
+          currencies.some((c) => c.code === salesSettings.default_currency_code && c.active)
+        ) {
+          if (!currency || currency === "YER") {
+            /* allow keeping existing default flow */
+          }
+        }
+        if (salesSettings.is_payment_method_required) {
+          if (!paymentMethod || !paymentMethods.includes(paymentMethod)) {
+            toast.error("يجب اختيار طريقة دفع صالحة");
+            return null;
+          }
+        }
       } else {
         if (
           !effectiveWarehouseId ||
@@ -396,6 +590,19 @@ function SalesPage() {
           ? customerIdRaw
           : null;
       const warehouseArg = effectiveWarehouseId;
+      const currentRateCalc =
+        currency === "YER"
+          ? 1
+          : exchangeRates.find((rate) => rate.currency_code === currency)?.rate_to_yer;
+      const rateMissingCalc =
+        currentRateCalc === undefined ||
+        !Number.isFinite(Number(currentRateCalc)) ||
+        Number(currentRateCalc) <= 0;
+      const finalAmountCalc = rateMissingCalc ? 0 : netTotal / Number(currentRateCalc);
+      if (rateMissingCalc) {
+        toast.error("لا يوجد سعر صرف صالح لهذه العملة");
+        return null;
+      }
       const operationId = draftId ?? crypto.randomUUID();
       const args: Record<string, unknown> = {
         _id: operationId,
@@ -403,10 +610,10 @@ function SalesPage() {
         _customer_name: selectedCustomer?.name ?? "",
         _warehouse: warehouseArg,
         _currency_code: currency,
-        _rate_to_yer: Number(currentRate),
+        _rate_to_yer: Number(currentRateCalc),
         _payment_method: paymentMethod,
         _affects_drawer: paymentMethod.includes("نقدي") || paymentMethod.startsWith("سعودي"),
-        _paid_amount: paymentMethod === "آجل" ? 0 : finalAmount,
+        _paid_amount: paymentMethod === "آجل" ? 0 : finalAmountCalc,
         _discount_yer: discountVal,
         _tax_yer: taxVal,
         _notes: "",

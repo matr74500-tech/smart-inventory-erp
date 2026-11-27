@@ -40,6 +40,7 @@ type SalesDefaultsForm = {
   default_tax: string;
   auto_print_receipt: boolean;
   print_printer_type: string;
+  auto_add_on_scan: boolean;
 };
 
 const PAGE_TYPES: { value: string; label: string }[] = [
@@ -167,6 +168,8 @@ function SalesSettingsPage() {
             default_tax: String(d.default_tax),
             auto_print_receipt: d.auto_print_receipt,
             print_printer_type: d.print_printer_type ?? "",
+            auto_add_on_scan:
+              (d as SalesDefault & { auto_add_on_scan?: boolean }).auto_add_on_scan ?? true,
           },
         }));
       }
@@ -183,7 +186,12 @@ function SalesSettingsPage() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.rpc("save_sales_defaults", {
+      const { error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ error: { message: string } | null }>
+      )("save_sales_defaults", {
         _page_type: pageType,
         _default_tier: data.default_tier,
         _default_currency_code: data.default_currency_code,
@@ -192,6 +200,7 @@ function SalesSettingsPage() {
         _default_tax: Number(data.default_tax),
         _auto_print_receipt: data.auto_print_receipt,
         _print_printer_type: data.print_printer_type || "",
+        _auto_add_on_scan: data.auto_add_on_scan,
       });
       if (error) throw error;
       toast.success(`تم حفظ إعدادات المبيعات لصفحة ${pageType}`);
@@ -444,6 +453,15 @@ function SalesSettingsPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>إضافة تلقائية عند المسح/الاختيار</Label>
+                        <Checkbox
+                          checked={fd.auto_add_on_scan}
+                          onCheckedChange={(v) =>
+                            updateFormField(pt.value, "auto_add_on_scan", Boolean(v))
+                          }
+                        />
                       </div>
                     </div>
                     <div className="mt-3 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
