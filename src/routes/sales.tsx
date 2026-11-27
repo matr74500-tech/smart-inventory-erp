@@ -244,22 +244,30 @@ function SalesPage() {
         toast.error("السلة فارغة");
         return null;
       }
-      if (!warehouse || warehouse === "undefined" || warehouse === "null") {
-        toast.error("الرجاء اختيار المستودع");
-        return null;
-      }
+
       if (rateMissing) {
         toast.error("لا يوجد سعر صرف صالح لهذه العملة");
         return null;
       }
 
       const selectedCustomer = customers.find((item) => item.id === customerId);
+      const customerIdRaw = (selectedCustomer?.id ?? "").trim();
+      const customerIdArg =
+        customerIdRaw && customerIdRaw !== "undefined" && customerIdRaw !== "null"
+          ? customerIdRaw
+          : null;
+      const warehouseRaw = (warehouse ?? "").trim();
+      if (!warehouseRaw || warehouseRaw === "undefined" || warehouseRaw === "null") {
+        toast.error("الرجاء اختيار المستودع");
+        return null;
+      }
+      const warehouseArg = warehouseRaw;
       const operationId = draftId ?? crypto.randomUUID();
-      const args = {
+      const args: Record<string, unknown> = {
         _id: operationId,
-        _customer_id: selectedCustomer?.id?.trim() || null,
+        _customer_id: customerIdArg,
         _customer_name: selectedCustomer?.name ?? "",
-        _warehouse: warehouse?.trim() || null,
+        _warehouse: warehouseArg,
         _currency_code: currency,
         _rate_to_yer: Number(currentRate),
         _payment_method: paymentMethod,
@@ -276,7 +284,11 @@ function SalesPage() {
         })),
       };
       if (!navigator.onLine) {
-        await enqueueRpc({ id: operationId, name: "save_sale_draft_offline", args: args as never });
+        await enqueueRpc({
+          id: operationId,
+          name: "save_sale_draft_offline",
+          args: args as never,
+        });
         setDraftId(operationId);
         toast.success("تم حفظ مسودة البيع محليًا وستتم مزامنتها عند عودة الاتصال");
         return operationId;
@@ -291,7 +303,7 @@ function SalesPage() {
             setDraftId(null);
             const retryId = crypto.randomUUID();
             try {
-              const retryArgs = { ...args, _id: retryId };
+              const retryArgs: Record<string, unknown> = { ...args, _id: retryId };
               const retry = await supabase.rpc("save_sale_draft" as never, retryArgs as never);
               if (retry.error) {
                 toast.error(`تعذر حفظ المسودة: ${retry.error.message}`);
