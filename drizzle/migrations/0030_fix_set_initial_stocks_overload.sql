@@ -1,4 +1,4 @@
--- Fix set_initial_stocks to call set_stock with explicit operation_id NULL (avoids overload ambiguity).
+-- Fix set_initial_stocks: use kind 'count' to match stocktake/DB constraint (stock_movements.kind allows 'count').
 CREATE OR REPLACE FUNCTION public.set_initial_stocks(_product uuid, _balances jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE item jsonb; warehouse_id uuid; quantity numeric;
@@ -21,7 +21,7 @@ BEGIN
       RAISE EXCEPTION 'المستودع أو الكمية غير صالح';
     END IF;
     IF quantity > 0 THEN
-      PERFORM public.set_stock(_product,warehouse_id,quantity,'رصيد افتتاحي'::text, NULL::uuid);
+      PERFORM public.set_stock(_product,warehouse_id,quantity,'count'::text, NULL::uuid);
     END IF;
   END LOOP;
 END $$;
