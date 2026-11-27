@@ -50,7 +50,11 @@ function SettingsEstablishmentPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
     if (error) {
       toast.error(error.message);
       setLoading(false);
@@ -131,7 +135,10 @@ function SettingsEstablishmentPage() {
             </div>
             <div className="space-y-2">
               <Label>النشاط</Label>
-              <Input value={businessActivity} onChange={(e) => setBusinessActivity(e.target.value)} />
+              <Input
+                value={businessActivity}
+                onChange={(e) => setBusinessActivity(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>العنوان</Label>
@@ -143,11 +150,19 @@ function SettingsEstablishmentPage() {
             </div>
             <div className="space-y-2">
               <Label>رابط الشعار (URL)</Label>
-              <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
+              <Input
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://..."
+              />
             </div>
             <div className="space-y-2">
               <Label>عبارات تسويقية (سطر لكل عبارة)</Label>
-              <Textarea value={slogansText} onChange={(e) => setSlogansText(e.target.value)} rows={4} />
+              <Textarea
+                value={slogansText}
+                onChange={(e) => setSlogansText(e.target.value)}
+                rows={4}
+              />
             </div>
             <div className="space-y-2">
               <Label>رقم العبارة النشطة (يبدأ من 0)</Label>
@@ -159,7 +174,11 @@ function SettingsEstablishmentPage() {
               />
             </div>
             <Button type="submit" disabled={busy || !canAction("settings.manage")}>
-              {busy ? <Loader2 className="size-4 animate-spin ml-2" /> : <Save className="size-4 ml-2" />}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin ml-2" />
+              ) : (
+                <Save className="size-4 ml-2" />
+              )}
               حفظ
             </Button>
           </form>

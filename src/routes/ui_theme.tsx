@@ -108,8 +108,10 @@ function UiThemePage() {
     void loadData();
     const channel = supabase
       .channel("ui-theme-settings")
-      .on("postgres_changes", { event: "*", schema: "public", table: "ui_theme_settings" }, () =>
-        void loadData(),
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ui_theme_settings" },
+        () => void loadData(),
       )
       .subscribe();
     return () => void supabase.removeChannel(channel);
@@ -131,7 +133,10 @@ function UiThemePage() {
   function setVisibleCol(key: string, on: boolean) {
     if (!setting) return;
     const next = { ...vc, [key]: on };
-    setSetting({ ...setting, visible_columns: next as unknown as UiThemeSetting["visible_columns"] });
+    setSetting({
+      ...setting,
+      visible_columns: next as unknown as UiThemeSetting["visible_columns"],
+    });
   }
 
   async function saveSetting() {
@@ -216,7 +221,8 @@ function UiThemePage() {
           <div>
             <h2 className="font-bold text-lg">التخصيص والشكل</h2>
             <p className="text-sm text-muted-foreground">
-              تخصيص سمة الواجهة، الألوان، الخط، اللغة، الإشعارات، شاشة البداية، حدود الخصم، وأعلام الميزات.
+              تخصيص سمة الواجهة، الألوان، الخط، اللغة، الإشعارات، شاشة البداية، حدود الخصم، وأعلام
+              الميزات.
             </p>
           </div>
         </div>
@@ -242,7 +248,12 @@ function UiThemePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="button" variant="secondary" onClick={() => void copyToUser()} disabled={copyBusy}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void copyToUser()}
+                disabled={copyBusy}
+              >
                 {copyBusy ? <Loader2 className="size-4 animate-spin" /> : null}
                 نسخ إعداداتي إليه
               </Button>
@@ -471,23 +482,38 @@ function UiThemePage() {
             <h4 className="font-semibold">أعلام الميزات (إظهار/إخفاء أقسام اختيارية)</h4>
             <div className="grid gap-2 md:grid-cols-2">
               <div className="flex items-center gap-2">
-                <Checkbox checked={ff.show_reports !== false} onCheckedChange={(v: boolean) => setFeatureFlag("show_reports", v)} />
+                <Checkbox
+                  checked={ff.show_reports !== false}
+                  onCheckedChange={(v: boolean) => setFeatureFlag("show_reports", v)}
+                />
                 <span className="text-sm">إظهار روابط التقارير في الواجهة (اقتراح)</span>
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox checked={ff.show_sales !== false} onCheckedChange={(v: boolean) => setFeatureFlag("show_sales", v)} />
+                <Checkbox
+                  checked={ff.show_sales !== false}
+                  onCheckedChange={(v: boolean) => setFeatureFlag("show_sales", v)}
+                />
                 <span className="text-sm">إظهار قسم المبيعات (اقتراح)</span>
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox checked={ff.show_purchases !== false} onCheckedChange={(v: boolean) => setFeatureFlag("show_purchases", v)} />
+                <Checkbox
+                  checked={ff.show_purchases !== false}
+                  onCheckedChange={(v: boolean) => setFeatureFlag("show_purchases", v)}
+                />
                 <span className="text-sm">إظهار قسم المشتريات (اقتراح)</span>
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox checked={ff.show_inventory !== false} onCheckedChange={(v: boolean) => setFeatureFlag("show_inventory", v)} />
+                <Checkbox
+                  checked={ff.show_inventory !== false}
+                  onCheckedChange={(v: boolean) => setFeatureFlag("show_inventory", v)}
+                />
                 <span className="text-sm">إظهار المخزون (اقتراح)</span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">هذه الأعلام محفوظة لكل مستخدم؛ تفعيل الإخفاء الكامل يتطلب ربط إضافي في التنقل (قابل للتوسع).</p>
+            <p className="text-xs text-muted-foreground">
+              هذه الأعلام محفوظة لكل مستخدم؛ تفعيل الإخفاء الكامل يتطلب ربط إضافي في التنقل (قابل
+              للتوسع).
+            </p>
           </div>
 
           <div className="space-y-3 border-t pt-4">
@@ -507,7 +533,11 @@ function UiThemePage() {
 
           <div className="pt-4 flex justify-end">
             <Button type="submit" disabled={busy || !canAction("settings.manage")}>
-              {busy ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin mr-2" />
+              ) : (
+                <Save className="size-4 mr-2" />
+              )}
               حفظ الإعدادات
             </Button>
           </div>

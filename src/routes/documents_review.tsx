@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -96,7 +102,11 @@ function DocumentsReviewPage() {
       const ext = row as SalesInvoice & { is_backdated?: boolean; display_number?: string | null };
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
       if (onlyBackdated && !ext.is_backdated) return false;
-      if ((dateFrom || dateTo) && !filterRowDate((ext as { document_date?: string }).document_date, row.created_at)) return false;
+      if (
+        (dateFrom || dateTo) &&
+        !filterRowDate((ext as { document_date?: string }).document_date, row.created_at)
+      )
+        return false;
       if (!q) return true;
       const hay = [
         String(row.number),
@@ -114,7 +124,11 @@ function DocumentsReviewPage() {
   const filteredReturns = useMemo(() => {
     const q = search.trim().toLowerCase();
     return returns.filter((row) => {
-      const ext = row as SalesReturn & { is_backdated?: boolean; display_number?: string | null; document_date?: string };
+      const ext = row as SalesReturn & {
+        is_backdated?: boolean;
+        display_number?: string | null;
+        document_date?: string;
+      };
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
       if (onlyBackdated && !ext.is_backdated) return false;
       if ((dateFrom || dateTo) && !filterRowDate(ext.document_date, row.created_at)) return false;
@@ -134,7 +148,11 @@ function DocumentsReviewPage() {
   const filteredVouchers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return vouchers.filter((row) => {
-      const ext = row as Voucher & { is_backdated?: boolean; display_number?: string | null; document_date?: string };
+      const ext = row as Voucher & {
+        is_backdated?: boolean;
+        display_number?: string | null;
+        document_date?: string;
+      };
       if (tab === "receipts" && row.kind !== "receipt") return false;
       if (tab === "payments" && row.kind !== "payment") return false;
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
@@ -170,7 +188,12 @@ function DocumentsReviewPage() {
     const list = filteredVouchers;
     const total = list.reduce((s, r) => s + Number(r.amount ?? 0), 0);
     const drafts = list.filter((r) => r.status === "draft").length;
-    return { count: list.length, totalYER: total, drafts, kindLabel: tab === "receipts" ? "قبض" : "صرف" };
+    return {
+      count: list.length,
+      totalYER: total,
+      drafts,
+      kindLabel: tab === "receipts" ? "قبض" : "صرف",
+    };
   }, [tab, filteredSales, filteredReturns, filteredVouchers]);
 
   const pagedSales = filteredSales.slice(page * pageSize, (page + 1) * pageSize);
@@ -197,15 +220,21 @@ function DocumentsReviewPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">عدد المستندات</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                عدد المستندات
+              </CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{summary.count}</CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي (ر.ي مكافئ/مبلغ)</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                إجمالي (ر.ي مكافئ/مبلغ)
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-2xl font-bold">{Number(summary.totalYER).toLocaleString("ar-YE")}</CardContent>
+            <CardContent className="text-2xl font-bold">
+              {Number(summary.totalYER).toLocaleString("ar-YE")}
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
@@ -299,26 +328,45 @@ function DocumentsReviewPage() {
                   </thead>
                   <tbody className="divide-y">
                     {pagedSales.map((row) => {
-                      const ext = row as SalesInvoice & { is_backdated?: boolean; display_number?: string | null; document_date?: string };
+                      const ext = row as SalesInvoice & {
+                        is_backdated?: boolean;
+                        display_number?: string | null;
+                        document_date?: string;
+                      };
                       const docDate = ext.document_date ?? row.created_at?.slice(0, 10) ?? "—";
                       return (
-                        <tr key={row.id} className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}>
+                        <tr
+                          key={row.id}
+                          className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}
+                        >
                           <td className="p-2 font-mono">{ext.display_number ?? row.number}</td>
                           <td className="p-2">
                             {docDate}
                             {ext.is_backdated && (
-                              <Badge variant="outline" className="mr-1 text-xs border-amber-500 text-amber-700">
+                              <Badge
+                                variant="outline"
+                                className="mr-1 text-xs border-amber-500 text-amber-700"
+                              >
                                 تاريخ قديم
                               </Badge>
                             )}
                           </td>
                           <td className="p-2">{row.customer_name || "نقدي"}</td>
                           <td className="p-2">
-                            <Badge variant={row.status === "posted" ? "default" : "secondary"}>{row.status}</Badge>
+                            <Badge variant={row.status === "posted" ? "default" : "secondary"}>
+                              {row.status}
+                            </Badge>
                           </td>
-                          <td className="p-2">{Number(row.total_yer).toLocaleString("ar-YE")} ر.ي</td>
                           <td className="p-2">
-                            <Button type="button" variant="ghost" size="sm" onClick={() => window.print()}>
+                            {Number(row.total_yer).toLocaleString("ar-YE")} ر.ي
+                          </td>
+                          <td className="p-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.print()}
+                            >
                               <Printer className="size-4" />
                             </Button>
                           </td>
@@ -352,10 +400,17 @@ function DocumentsReviewPage() {
                 </thead>
                 <tbody className="divide-y">
                   {pagedReturns.map((row) => {
-                    const ext = row as SalesReturn & { is_backdated?: boolean; display_number?: string | null; document_date?: string };
+                    const ext = row as SalesReturn & {
+                      is_backdated?: boolean;
+                      display_number?: string | null;
+                      document_date?: string;
+                    };
                     const docDate = ext.document_date ?? row.created_at?.slice(0, 10) ?? "—";
                     return (
-                      <tr key={row.id} className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}>
+                      <tr
+                        key={row.id}
+                        className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}
+                      >
                         <td className="p-2 font-mono">{ext.display_number ?? row.number}</td>
                         <td className="p-2">{docDate}</td>
                         <td className="p-2">{row.customer_name || "—"}</td>
@@ -388,10 +443,21 @@ function DocumentsReviewPage() {
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            صفحة {page + 1} — عرض {tab === "sales" ? filteredSales.length : tab === "returns" ? filteredReturns.length : filteredVouchers.length} نتيجة
+            صفحة {page + 1} — عرض{" "}
+            {tab === "sales"
+              ? filteredSales.length
+              : tab === "returns"
+                ? filteredReturns.length
+                : filteredVouchers.length}{" "}
+            نتيجة
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
               السابق
             </Button>
             <Button
@@ -431,10 +497,17 @@ function VoucherTable({ rows, kind }: { rows: Voucher[]; kind: "receipt" | "paym
         </thead>
         <tbody className="divide-y">
           {list.map((row) => {
-            const ext = row as Voucher & { is_backdated?: boolean; display_number?: string | null; document_date?: string };
+            const ext = row as Voucher & {
+              is_backdated?: boolean;
+              display_number?: string | null;
+              document_date?: string;
+            };
             const docDate = ext.document_date ?? row.created_at?.slice(0, 10) ?? "—";
             return (
-              <tr key={row.id} className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}>
+              <tr
+                key={row.id}
+                className={ext.is_backdated ? "bg-amber-50/80 dark:bg-amber-950/20" : ""}
+              >
                 <td className="p-2 font-mono">{ext.display_number ?? row.number}</td>
                 <td className="p-2">{docDate}</td>
                 <td className="p-2">{row.payee || "—"}</td>
