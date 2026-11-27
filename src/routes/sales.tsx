@@ -71,9 +71,21 @@ export const Route = createFileRoute("/sales")({
   component: SalesPage,
 });
 
-type CartItem = { product: Product; qty: number; price: number; tier: PriceKey };
+type CartItem = {
+  product: Product;
+  qty: number;
+  price: number;
+  tier: PriceKey;
+  warehouseId: string;
+  unitName: string;
+  bonusQty: number;
+  lineDiscountYER: number;
+  lineTaxYER: number;
+  note: string;
+};
 type Customer = Tables<"customers">;
 type SalesInvoice = Tables<"sales_invoices">;
+type SalesItemRow = Tables<"sales_items">;
 type SalesSettingsRow = {
   id: string;
   default_customer_id: string | null;
@@ -125,6 +137,11 @@ function SalesPage() {
   const [tax, setTax] = useState("0");
   const [busy, setBusy] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [documentDate, setDocumentDate] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [isBackdated, setIsBackdated] = useState(false);
+  const [backdateReason, setBackdateReason] = useState("");
   const savingRef = useRef(false);
   const postingRef = useRef(false);
   const [salesSettings, setSalesSettings] = useState<SalesSettingsRow | null>(null);
@@ -360,10 +377,14 @@ function SalesPage() {
   }, [warehouses, warehouse]);
 
   const addToCart = useCallback(
-    (p: Product, delta = 1, tier: PriceKey = defaultTier) => {
+    (p: Product, delta = 1, tier: PriceKey = defaultTier, whId?: string) => {
       const itemPrice = Number(p[tier] ?? p.price ?? 0);
+      const lineWh = whId ?? warehouse ?? p.warehouse_id ?? warehouses[0]?.id ?? "";
+      const baseUnit = p.unit ?? p.major_unit ?? "حبة";
       setCart((items) => {
-        const idx = items.findIndex((i) => i.product.id === p.id && i.tier === tier);
+        const idx = items.findIndex(
+          (i) => i.product.id === p.id && i.tier === tier && i.warehouseId === lineWh,
+        );
         if (idx >= 0) {
           const next = [...items];
           const existing = next[idx];
@@ -374,11 +395,29 @@ function SalesPage() {
           return next;
         }
         if (delta <= 0) return items;
-        return [...items, { product: p, qty: delta, price: itemPrice, tier }];
+        if (!lineWh) {
+          toast.error("اختر مستودعاً أولاً قبل الإضافة");
+          return items;
+        }
+        return [
+          ...items,
+          {
+            product: p,
+            qty: delta,
+            price: itemPrice,
+            tier,
+            warehouseId: lineWh,
+            unitName: baseUnit,
+            bonusQty: 0,
+            lineDiscountYER: 0,
+            lineTaxYER: 0,
+            note: "",
+          },
+        ];
       });
       setQ("");
     },
-    [defaultTier],
+    [defaultTier, warehouse, warehouses],
   );
 
   const onScan = useCallback(
@@ -449,12 +488,13 @@ function SalesPage() {
         toast.message("الإضافة التلقائية بالمسح معطّلة من إعدادات المبيعات. أضف يدوياً.");
         return;
       }
-      const stock = qty(p.id);
-      if (!stock || stock <= 0) {
-        toast.error(`لا يوجد رصيد كافٍ للصنف: ${p.name}`);
+      const wh = warehouse ?? p.warehouse_id ?? warehouses[0]?.id;
+      const stockAtWh = qty(p.id, wh);
+      if (!stockAtWh || stockAtWh <= 0) {
+        toast.error(`لا يوجد رصيد كافٍ للصنف في المستودع المحدد: ${p.name}`);
         return;
       }
-      addToCart(p, 1, defaultTier);
+      addToCart(p, 1, defaultTier, wh);
       toast.success(`تمت الإضافة: ${p.name} (+1)`);
     },
     [products, addToCart, defaultTier, scannerSetting, salesDefault, salesSettings, qty],
@@ -464,7 +504,12 @@ function SalesPage() {
     setCart((items) => items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
-  const subtotal = cart.reduce((s, i) => s + i.qty * i.price, 0);
+  const subtotal = cart.reduce(
+    (s, i) =>
+      s +
+      Math.max(0, i.qty * i.price - (Number(i.lineDiscountYER) || 0) + (Number(i.lineTaxYER) || 0)),
+    0,
+  );
   const discountVal = Number(discount) || 0;
   const taxVal = Number(tax) || 0;
   const netTotal = Math.max(0, subtotal - discountVal + taxVal);
@@ -622,7 +667,17 @@ function SalesPage() {
           quantity: item.qty,
           unit_price_yer: item.price,
           price_tier: item.tier,
+          warehouse_id: item.warehouseId || warehouseArg,
+          unit_name: item.unitName || item.product.unit || null,
+          bonus_qty: item.bonusQty || 0,
+          line_discount_yer: item.lineDiscountYER || 0,
+          line_tax_yer: item.lineTaxYER || 0,
+          note: item.note || null,
         })),
+        _document_date: documentDate || null,
+        _is_backdated: isBackdated || documentDate !== new Date().toISOString().slice(0, 10),
+        _backdate_reason: backdateReason.trim() || null,
+        _manual_number: null,
       };
       if (!navigator.onLine) {
         await enqueueRpc({
@@ -960,11 +1015,25 @@ function SalesPage() {
         return;
       }
       const tier = PRICE_TIERS.find((item) => item.key === line.price_tier)?.key ?? "price";
+      const lr = line as SalesItemRow & {
+        warehouse_id?: string | null;
+        unit_name?: string | null;
+        bonus_qty?: number | null;
+        line_discount_yer?: number | null;
+        line_tax_yer?: number | null;
+        note?: string | null;
+      };
       restored.push({
         product,
         qty: Number(line.quantity),
         price: Number(line.unit_price_yer),
         tier,
+        warehouseId: lr.warehouse_id ?? invoice.warehouse_id,
+        unitName: lr.unit_name ?? product.unit ?? "حبة",
+        bonusQty: Number(lr.bonus_qty ?? 0),
+        lineDiscountYER: Number(lr.line_discount_yer ?? 0),
+        lineTaxYER: Number(lr.line_tax_yer ?? 0),
+        note: lr.note ?? "",
       });
     }
     setDraftId(invoice.id);
@@ -975,6 +1044,18 @@ function SalesPage() {
     setPaymentMethod(invoice.payment_method);
     setDiscount(String(invoice.discount_yer));
     setTax(String(invoice.tax_yer));
+    const invExt = invoice as SalesInvoice & {
+      document_date?: string | null;
+      is_backdated?: boolean | null;
+      backdate_reason?: string | null;
+    };
+    setDocumentDate(
+      invExt.document_date ??
+        invoice.created_at?.slice(0, 10) ??
+        new Date().toISOString().slice(0, 10),
+    );
+    setIsBackdated(Boolean(invExt.is_backdated));
+    setBackdateReason(invExt.backdate_reason ?? "");
     toast.success(`تم تحميل مسودة الفاتورة #${invoice.number}`);
   }
 
@@ -1239,7 +1320,7 @@ function SalesPage() {
                           size="icon"
                           variant="ghost"
                           className="size-7"
-                          onClick={() => addToCart(item.product, -1, item.tier)}
+                          onClick={() => addToCart(item.product, -1, item.tier, item.warehouseId)}
                         >
                           <Minus className="size-3" />
                         </Button>
@@ -1510,6 +1591,29 @@ function SalesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1">
+                <Label>تاريخ المستند</Label>
+                <Input
+                  type="date"
+                  value={documentDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDocumentDate(v);
+                    const today = new Date().toISOString().slice(0, 10);
+                    if (v && v < today) setIsBackdated(true);
+                    else if (v === today) setIsBackdated(false);
+                  }}
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-3">
+                <Label>سبب التأريخ الخلفي (اختياري)</Label>
+                <Input
+                  value={backdateReason}
+                  onChange={(e) => setBackdateReason(e.target.value)}
+                  placeholder="مثال: فاتورة ورقية قديمة"
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -1528,86 +1632,202 @@ function SalesPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
-                    <th className="p-3 text-right">الصنف</th>
-                    {showTierColumn && <th className="p-3 text-right">الشريحة</th>}
-                    <th className="p-3 text-right">السعر</th>
-                    <th className="p-3 text-right">الكمية</th>
-                    <th className="p-3 text-right">الإجمالي</th>
+                    <th className="p-2 text-right min-w-[140px]">الصنف</th>
+                    <th className="p-2 text-right">المستودع</th>
+                    {showTierColumn && <th className="p-2 text-right">الشريحة</th>}
+                    <th className="p-2 text-right">السعر</th>
+                    <th className="p-2 text-right">الكمية</th>
+                    <th className="p-2 text-right">بونص</th>
+                    <th className="p-2 text-right">خصم سطر</th>
+                    <th className="p-2 text-right">ضريبة سطر</th>
+                    <th className="p-2 text-right">الإجمالي</th>
+                    <th className="p-2 text-right">ملاحظة</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {cart.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-muted/50">
-                      <td className="p-3 font-medium">{item.product.name}</td>
-                      {showTierColumn && (
-                        <td className="p-3 text-xs">
-                          {PRICE_TIERS.find((t) => t.key === item.tier)?.label}
-                        </td>
-                      )}
-                      <td className="p-3">
-                        <Input
-                          className="w-24 h-9"
-                          type="number"
-                          min="0"
-                          step="any"
-                          aria-label={`سعر ${item.product.name}`}
-                          value={item.price}
-                          disabled={!canAction("sales.override_price")}
-                          onChange={(e) => {
-                            const price = Number(e.target.value);
-                            if (Number.isFinite(price) && price >= 0)
-                              updateCartItem(idx, { price });
-                          }}
-                        />
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7"
-                            onClick={() => addToCart(item.product, -1, item.tier)}
+                  {cart.map((item, idx) => {
+                    const lineTotal = Math.max(
+                      0,
+                      item.qty * item.price - (item.lineDiscountYER || 0) + (item.lineTaxYER || 0),
+                    );
+                    return (
+                      <tr key={idx} className="hover:bg-muted/50">
+                        <td className="p-2 font-medium align-top">{item.product.name}</td>
+                        <td className="p-2 align-top">
+                          <Select
+                            value={item.warehouseId || warehouse || ""}
+                            onValueChange={(v) => updateCartItem(idx, { warehouseId: v })}
                           >
-                            <Minus className="size-3" />
-                          </Button>
+                            <SelectTrigger className="h-9 min-w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {warehouses.map((w) => (
+                                <SelectItem key={w.id} value={w.id}>
+                                  {w.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        {showTierColumn && (
+                          <td className="p-2 align-top">
+                            <Select
+                              value={item.tier}
+                              onValueChange={(v) => {
+                                const tier = v as PriceKey;
+                                const newPrice = Number(item.product[tier] ?? item.product.price);
+                                updateCartItem(idx, { tier, price: newPrice });
+                              }}
+                            >
+                              <SelectTrigger className="h-9 min-w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PRICE_TIERS.map((t) => (
+                                  <SelectItem key={t.key} value={t.key}>
+                                    {t.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        )}
+                        <td className="p-2 align-top">
                           <Input
-                            className="w-16 h-8 text-center"
+                            className="w-24 h-9"
                             type="number"
-                            min="0.01"
+                            min="0"
                             step="any"
-                            aria-label={`كمية ${item.product.name}`}
-                            value={item.qty}
+                            aria-label={`سعر ${item.product.name}`}
+                            value={item.price}
+                            disabled={!canAction("sales.override_price")}
                             onChange={(e) => {
-                              const qty = Number(e.target.value);
-                              if (Number.isFinite(qty) && qty > 0) updateCartItem(idx, { qty });
+                              const price = Number(e.target.value);
+                              if (Number.isFinite(price) && price >= 0)
+                                updateCartItem(idx, { price });
                             }}
                           />
+                        </td>
+                        <td className="p-2 align-top">
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7"
+                              onClick={() =>
+                                addToCart(item.product, -1, item.tier, item.warehouseId)
+                              }
+                            >
+                              <Minus className="size-3" />
+                            </Button>
+                            <Input
+                              className="w-16 h-8 text-center"
+                              type="number"
+                              min="0.01"
+                              step="any"
+                              aria-label={`كمية ${item.product.name}`}
+                              value={item.qty}
+                              onChange={(e) => {
+                                const qty = Number(e.target.value);
+                                if (Number.isFinite(qty) && qty > 0) updateCartItem(idx, { qty });
+                              }}
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7"
+                              onClick={() =>
+                                addToCart(item.product, 1, item.tier, item.warehouseId)
+                              }
+                            >
+                              <Plus className="size-3" />
+                            </Button>
+                          </div>
+                          {(() => {
+                            const av = qty(item.product.id, item.warehouseId);
+                            return av <= 0 ? (
+                              <p className="text-[10px] text-destructive mt-1">لا رصيد</p>
+                            ) : av < item.qty ? (
+                              <p className="text-[10px] text-amber-600 mt-1">متاح: {av}</p>
+                            ) : null;
+                          })()}
+                        </td>
+                        <td className="p-2 align-top">
+                          <Input
+                            className="w-20 h-9"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={item.bonusQty}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              updateCartItem(idx, {
+                                bonusQty: Number.isFinite(v) && v >= 0 ? v : 0,
+                              });
+                            }}
+                          />
+                        </td>
+                        <td className="p-2 align-top">
+                          <Input
+                            className="w-24 h-9"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={item.lineDiscountYER}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              updateCartItem(idx, {
+                                lineDiscountYER: Number.isFinite(v) && v >= 0 ? v : 0,
+                              });
+                            }}
+                          />
+                        </td>
+                        <td className="p-2 align-top">
+                          <Input
+                            className="w-24 h-9"
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={item.lineTaxYER}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              updateCartItem(idx, {
+                                lineTaxYER: Number.isFinite(v) && v >= 0 ? v : 0,
+                              });
+                            }}
+                          />
+                        </td>
+                        <td className="p-2 font-bold align-top whitespace-nowrap">
+                          {lineTotal.toFixed(2)} ر.ي
+                        </td>
+                        <td className="p-2 align-top">
+                          <Input
+                            className="min-w-[140px] h-9 text-xs"
+                            placeholder="ملاحظة"
+                            value={item.note}
+                            onChange={(e) => updateCartItem(idx, { note: e.target.value })}
+                          />
+                        </td>
+                        <td className="p-2 align-top">
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="size-7"
-                            onClick={() => addToCart(item.product, 1, item.tier)}
+                            onClick={() => setCart(cart.filter((_, i) => i !== idx))}
                           >
-                            <Plus className="size-3" />
+                            <Trash2 className="size-4 text-destructive" />
                           </Button>
-                        </div>
-                      </td>
-                      <td className="p-3 font-bold">{item.qty * item.price} ر.ي</td>
-                      <td className="p-3">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setCart(cart.filter((_, i) => i !== idx))}
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {cart.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                      <td
+                        colSpan={showTierColumn ? 11 : 10}
+                        className="p-12 text-center text-muted-foreground"
+                      >
                         لم يتم إضافة أصناف الفاتورة بعد
                       </td>
                     </tr>
