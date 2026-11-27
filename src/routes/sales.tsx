@@ -102,6 +102,8 @@ type SalesSettingsRow = {
 };
 type SalesDefaultRow = Tables<"sales_defaults">;
 type ScannerSettingRow = Tables<"scanner_settings">;
+type PrintSettingRow = Tables<"print_settings">;
+type AppSettingsRow = Tables<"app_settings">;
 
 function SalesPage() {
   const { canAction } = useAuth();
@@ -147,6 +149,8 @@ function SalesPage() {
   const [salesSettings, setSalesSettings] = useState<SalesSettingsRow | null>(null);
   const [salesDefault, setSalesDefault] = useState<SalesDefaultRow | null>(null);
   const [scannerSetting, setScannerSetting] = useState<ScannerSettingRow | null>(null);
+  const [printSetting, setPrintSetting] = useState<PrintSettingRow | null>(null);
+  const [establishment, setEstablishment] = useState<AppSettingsRow | null>(null);
   const salesDefaultsAppliedRef = useRef(false);
 
   const paymentMethods = (settings?.payment_methods as string[]) ?? [
@@ -259,6 +263,56 @@ function SalesPage() {
         { event: "*", schema: "public", table: "scanner_settings" },
         () => void loadScanner(),
       )
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(ch);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadPrint = async () => {
+      const { data, error } = await supabase
+        .from("print_settings")
+        .select("*")
+        .eq("document_type", "invoice")
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setPrintSetting(null);
+        return;
+      }
+      setPrintSetting((data as PrintSettingRow) ?? null);
+    };
+    void loadPrint();
+    const ch = supabase
+      .channel("print-settings-invoice-sales")
+      .on("postgres_changes", { event: "*", schema: "public", table: "print_settings" }, () => void loadPrint())
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(ch);
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadApp = async () => {
+      const { data, error } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setEstablishment(null);
+        return;
+      }
+      setEstablishment((data as AppSettingsRow) ?? null);
+    };
+    void loadApp();
+    const ch = supabase
+      .channel("app-settings-sales")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, () => void loadApp())
       .subscribe();
     return () => {
       active = false;
@@ -1878,6 +1932,88 @@ function SalesPage() {
               >
                 حفظ وترحيل الفاتورة
               </Button>
+            </div>
+
+            {/* Print area (invoice) */}
+            <div className="print-area hidden print:block mt-6 text-foreground bg-white p-4 rounded-lg" dir="rtl">
+              {(() => {
+                const ps = printSetting;
+                const est = establishment;
+                const slogans = Array.isArray((est as { marketing_slogans?: unknown[] } | null)?.marketing_slogans)
+                  ? ((est as { marketing_slogans?: string[] }).marketing_slogans ?? [])
+                  : [];
+                const idx = Number((est as { active_marketing_slogan_index?: number } | null)?.active_marketing_slogan_index ?? 0);
+                const slogan = slogans.length ? slogans[Math.min(idx, slogans.length - 1)] : "";
+                const mktMode = (ps as { marketing_mode?: string } | null)?.marketing_mode ?? "footer";
+                const showMkt = mktMode !== "none" && slogan;
+                const mkHeader = showMkt && mktMode === "header" ? slogan : null;
+                const mkFooter = showMkt && mktMode === "footer" ? slogan : null;
+                const showCashier = (ps as { show_cashier_name?: boolean } | null)?.show_cashier_name ?? true;
+                const showBal = (ps as { show_customer_balance?: boolean } | null)?.show_customer_balance ?? false;
+                const showTasqit = (ps as { show_tasqit?: boolean } | null)?.show_tasqit ?? false;
+                const cust = customers.find((c) => c.id === customerId);
+                return (
+                  <>
+                    {mkHeader && <div className="text-center text-sm mb-2 font-medium">{mkHeader}</div>}
+                    <div className="border-b pb-3 mb-3">
+                      {(ps?.show_logo ?? true) && est?.logo_url && (
+                        <img src={est.logo_url} alt="" className="h-14 object-contain mb-2" />
+                      )}
+                      {(ps?.show_shop_name ?? true) && <h2 className="text-lg font-bold">{est?.business_name || est?.shop_name || "المحل"}</h2>}
+                      {(ps?.show_shop_address ?? false) && est?.address && <p className="text-sm">{est.address}</p>}
+                      {(ps?.show_shop_phone ?? false) && (est?.contact_numbers || est?.phone) && (
+                        <p className="text-sm">{est?.contact_numbers || est?.phone}</p>
+                      )}
+                      {est?.business_activity && <p className="text-xs text-gray-600">{est.business_activity}</p>}
+                    </div>
+                    {(ps?.show_date_time ?? true) && (
+                      <p className="text-sm mb-2">التاريخ: {documentDate} {new Date().toLocaleTimeString("ar-YE")}</p>
+                    )}
+                    {showCashier && <p className="text-sm mb-1">الكاشير: (المستخدم الحالي)</p>}
+                    {(ps?.show_customer_info ?? true) && cust && (
+                      <div className="text-sm mb-2">
+                        <p>العميل: {cust.name}</p>
+                        {cust.phone && <p>الهاتف: {cust.phone}</p>}
+                        {showBal && <p>الرصيد (تقريبي): راجع كشف الحساب</p>}
+                      </div>
+                    )}
+                    {ps?.show_items_table !== false && (
+                      <table className="w-full text-sm border-collapse border border-gray-300 mb-3">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 p-1 text-right">الصنف</th>
+                            <th className="border border-gray-300 p-1">الكمية</th>
+                            <th className="border border-gray-300 p-1">السعر</th>
+                            <th className="border border-gray-300 p-1">الإجمالي</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cart.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="border border-gray-300 p-1">{item.product.name}</td>
+                              <td className="border border-gray-300 p-1 text-center">{item.qty}</td>
+                              <td className="border border-gray-300 p-1 text-center">{item.price.toFixed(2)}</td>
+                              <td className="border border-gray-300 p-1 text-center">{(item.qty * item.price).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {(ps?.show_totals ?? true) && (
+                      <div className="text-sm space-y-1">
+                        <p>المجموع الفرعي: {subtotal.toFixed(2)} ر.ي</p>
+                        {(ps?.show_discount ?? true) && <p>الخصم: {Number(discount || 0).toFixed(2)} ر.ي</p>}
+                        {(ps?.show_tax ?? true) && <p>الضريبة: {Number(tax || 0).toFixed(2)} ر.ي</p>}
+                        <p className="font-bold">الإجمالي: {finalAmount.toFixed(2)} {currentCurrency?.code ?? currency}</p>
+                      </div>
+                    )}
+                    {(ps?.show_payment_method ?? true) && <p className="text-sm mt-2">طريقة الدفع: {paymentMethod}</p>}
+                    {showTasqit && <p className="text-sm mt-1">ملاحظة: تسقيط/تفاصيل التقسيط حسب الاتفاق.</p>}
+                    {mkFooter && <div className="text-center text-sm mt-4 border-t pt-2">{mkFooter}</div>}
+                    {ps?.show_footer && ps?.footer_text && <p className="text-center text-xs mt-2">{ps.footer_text}</p>}
+                  </>
+                );
+              })()}
             </div>
 
             <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>

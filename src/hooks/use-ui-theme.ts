@@ -1,59 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import type { Tables } from "@/integrations/supabase/types";
+import { applyUiThemeToDom, type UiThemeSetting } from "@/lib/uiTheme";
 
-export type UiThemeSetting = Tables<"ui_theme_settings">;
-
-const FONT_MAP: Record<string, string> = {
-  Tahoma: 'Tahoma, "Segoe UI", sans-serif',
-  Arial: 'Arial, "Helvetica Neue", sans-serif',
-  Cairo: '"Cairo", "Tajawal", system-ui, sans-serif',
-};
-
-const FONT_SIZE_MAP: Record<string, string> = {
-  small: "14px",
-  medium: "16px",
-  large: "18px",
-};
-
-export function applyUiThemeToDom(s: UiThemeSetting) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-
-  const mode = s.theme_mode;
-  const prefersDark =
-    typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const isDark = mode === "dark" || (mode === "system" && prefersDark);
-  root.classList.toggle("dark", isDark);
-
-  root.lang = s.language || "ar";
-  root.dir = s.rtl_layout ? "rtl" : "ltr";
-
-  const fontFamily = FONT_MAP[s.font_family] ?? FONT_MAP["Tahoma"];
-  root.style.setProperty("--font-sans", fontFamily);
-  const displayFont =
-    s.font_family === "Cairo" ? '"Cairo", "Tajawal", system-ui, sans-serif' : fontFamily;
-  root.style.setProperty("--font-display", displayFont);
-
-  const fs = FONT_SIZE_MAP[s.font_size] ?? FONT_SIZE_MAP["medium"];
-  root.style.fontSize = fs;
-
-  root.dataset["compact"] = s.compact_mode ? "true" : "false";
-  if (s.compact_mode) {
-    root.style.setProperty("--radius", "0.5rem");
-  } else {
-    root.style.removeProperty("--radius");
-  }
-
-  root.dataset["showAvatars"] = s.show_avatars ? "true" : "false";
-  root.dataset["showAnimations"] = s.show_animations ? "true" : "false";
-  if (!s.show_animations) {
-    root.classList.add("reduce-motion");
-  } else {
-    root.classList.remove("reduce-motion");
-  }
-}
+export { type UiThemeSetting, applyUiThemeToDom } from "@/lib/uiTheme";
 
 export function useUiTheme() {
   const { session } = useAuth();
@@ -76,7 +26,7 @@ export function useUiTheme() {
     if (error) {
       console.error("load ui_theme_settings", error.message);
     }
-    const next = data ?? null;
+    const next = (data as UiThemeSetting | null) ?? null;
     setSetting(next);
     if (next) applyUiThemeToDom(next);
     setLoading(false);

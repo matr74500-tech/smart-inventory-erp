@@ -222,6 +222,7 @@ function SalesSettingsPage() {
 
     setBusy(true);
     try {
+      const pAny = p as PrintSetting & { show_cashier_name?: boolean; show_customer_balance?: boolean; show_tasqit?: boolean; marketing_mode?: string };
       const { error } = await supabase.rpc("save_print_settings", {
         _document_type: docType,
         _paper_size: p.paper_size,
@@ -252,6 +253,10 @@ function SalesSettingsPage() {
         _footer_text: p.footer_text || "",
         _printer_type: p.printer_type || "",
         _copies: p.copies,
+        _show_cashier_name: pAny.show_cashier_name ?? true,
+        _show_customer_balance: pAny.show_customer_balance ?? false,
+        _show_tasqit: pAny.show_tasqit ?? false,
+        _marketing_mode: pAny.marketing_mode ?? "footer",
       });
       if (error) throw error;
       toast.success(`تم حفظ إعدادات طباعة ${docType}`);
@@ -754,6 +759,43 @@ function SalesSettingsPage() {
                             onCheckedChange={(v) => updatePrintField(dt.value, "show_footer", v)}
                           />
                           <span className="text-sm">التذييل</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={Boolean((p as unknown as { show_cashier_name?: boolean }).show_cashier_name ?? true)}
+                            onCheckedChange={(v) => updatePrintField(dt.value, "show_cashier_name" as never, v as never)}
+                          />
+                          <span className="text-sm">عرض اسم الكاشير</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={Boolean((p as unknown as { show_customer_balance?: boolean }).show_customer_balance)}
+                            onCheckedChange={(v) => updatePrintField(dt.value, "show_customer_balance" as never, v as never)}
+                          />
+                          <span className="text-sm">عرض رصيد العميل</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={Boolean((p as unknown as { show_tasqit?: boolean }).show_tasqit)}
+                            onCheckedChange={(v) => updatePrintField(dt.value, "show_tasqit" as never, v as never)}
+                          />
+                          <span className="text-sm">عرض التقسيط (تسقيط)</span>
+                        </div>
+                        <div className="space-y-2 pt-2">
+                          <Label>وضع التسويق</Label>
+                          <Select
+                            value={String((p as unknown as { marketing_mode?: string }).marketing_mode ?? "footer")}
+                            onValueChange={(v) => updatePrintField(dt.value, "marketing_mode" as never, v as never)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="footer">أسفل المستند</SelectItem>
+                              <SelectItem value="header">أعلى المستند</SelectItem>
+                              <SelectItem value="none">بدون</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div className="space-y-1">

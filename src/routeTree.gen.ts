@@ -44,6 +44,8 @@ import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as System_timezoneRouteImport } from './routes/system_timezone'
 import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as Ui_themeRouteImport } from './routes/ui_theme'
+import { Route as Settings_establishmentRouteImport } from './routes/settings_establishment'
+import { Route as Documents_reviewRouteImport } from './routes/documents_review'
 import { Route as UsersRouteImport } from './routes/users'
 
 const IndexRoute = IndexRouteImport.update({
@@ -339,6 +341,8 @@ export interface FileRoutesById {
   '/system_timezone': typeof System_timezoneRoute
   '/transfers': typeof TransfersRoute
   '/ui_theme': typeof Ui_themeRoute
+  '/documents_review': typeof Documents_reviewRoute
+  '/settings_establishment': typeof Settings_establishmentRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
@@ -377,6 +381,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/system_timezone'
     | '/transfers'
+    | '/documents_review'
+    | '/settings_establishment'
     | '/ui_theme'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
@@ -451,6 +457,8 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/system_timezone'
     | '/transfers'
+    | '/documents_review'
+    | '/settings_establishment'
     | '/ui_theme'
     | '/users'
   fileRoutesById: FileRoutesById
