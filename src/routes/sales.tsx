@@ -74,6 +74,15 @@ export const Route = createFileRoute("/sales")({
 type CartItem = { product: Product; qty: number; price: number; tier: PriceKey };
 type Customer = Tables<"customers">;
 type SalesInvoice = Tables<"sales_invoices">;
+type SalesSettingsRow = {
+  id: string;
+  default_customer_id: string | null;
+  default_warehouse_id: string | null;
+  is_customer_required: boolean;
+  is_warehouse_required: boolean;
+  apply_to_quick_sales: boolean;
+  apply_to_new_invoice: boolean;
+};
 
 function SalesPage() {
   const { canAction } = useAuth();
@@ -86,7 +95,7 @@ function SalesPage() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showTierColumn, setShowTierColumn] = useState(true);
-  const [warehouse, setWarehouse] = useState(() => warehouses[0]?.id || undefined);
+  const [warehouse, setWarehouse] = useState<string | undefined>(() => warehouses[0]?.id);
   const [defaultTier, setDefaultTier] = useState<PriceKey>("price");
   const [currency, setCurrency] = useState("YER");
   const [paymentMethod, setPaymentMethod] = useState("نقدي YER");
@@ -111,6 +120,8 @@ function SalesPage() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const savingRef = useRef(false);
   const postingRef = useRef(false);
+  const [salesSettings, setSalesSettings] = useState<SalesSettingsRow | null>(null);
+  const salesSettingsAppliedRef = useRef(false);
 
   const paymentMethods = (settings?.payment_methods as string[]) ?? [
     "نقدي YER",
@@ -118,6 +129,71 @@ function SalesPage() {
     "تحويلات شبكات محلية",
     "آجل",
   ];
+
+  useEffect(() => {
+    let active = true;
+    const loadSettings = async () => {
+      const { data, error } = await (
+        supabase.from("sales_settings" as never) as never as {
+          select: (s: string) => {
+            order: (
+              c: string,
+              o: { ascending: boolean },
+            ) => {
+              limit: (n: number) => {
+                maybeSingle: () => Promise<{
+                  data: SalesSettingsRow | null;
+                  error: { message: string } | null;
+                }>;
+              };
+            };
+          };
+        }
+      )
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setSalesSettings(null);
+        return;
+      }
+      setSalesSettings((data as SalesSettingsRow) ?? null);
+    };
+    void loadSettings();
+    const ch = supabase
+      .channel("sales-settings-sales-page")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sales_settings" },
+        () => void loadSettings(),
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      void supabase.removeChannel(ch);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!salesSettings) return;
+    const isQuick = view !== "invoice";
+    const allowed =
+      (isQuick && salesSettings.apply_to_quick_sales) ||
+      (!isQuick && salesSettings.apply_to_new_invoice);
+    if (!allowed) return;
+    if (salesSettingsAppliedRef.current) return;
+    salesSettingsAppliedRef.current = true;
+    if (salesSettings.default_warehouse_id) {
+      const exists = warehouses.some((w) => w.id === salesSettings.default_warehouse_id);
+      if (exists) setWarehouse(salesSettings.default_warehouse_id);
+    }
+    if (salesSettings.default_customer_id && !customerId) {
+      setCustomerId(salesSettings.default_customer_id);
+    }
+  }, [salesSettings, view, warehouses, customerId]);
 
   const refreshDrafts = useCallback(async () => {
     const { data, error } = await supabase
@@ -250,18 +326,76 @@ function SalesPage() {
         return null;
       }
 
-      const selectedCustomer = customers.find((item) => item.id === customerId);
-      const customerIdRaw = (selectedCustomer?.id ?? "").trim();
+      const isQuick = view !== "invoice";
+      const allowedBySettings =
+        !salesSettings ||
+        (isQuick ? salesSettings.apply_to_quick_sales : salesSettings.apply_to_new_invoice);
+      let effectiveCustomerId = customerId.trim();
+      let effectiveWarehouseId = (warehouse ?? "").trim();
+      if (allowedBySettings && salesSettings) {
+        if (salesSettings.is_customer_required) {
+          if (
+            !effectiveCustomerId ||
+            effectiveCustomerId === "undefined" ||
+            effectiveCustomerId === "null"
+          ) {
+            toast.error("يجب اختيار العميل");
+            return null;
+          }
+        } else {
+          if (
+            (!effectiveCustomerId ||
+              effectiveCustomerId === "undefined" ||
+              effectiveCustomerId === "null") &&
+            salesSettings.default_customer_id
+          ) {
+            effectiveCustomerId = salesSettings.default_customer_id;
+          }
+        }
+        if (salesSettings.is_warehouse_required) {
+          if (
+            !effectiveWarehouseId ||
+            effectiveWarehouseId === "undefined" ||
+            effectiveWarehouseId === "null"
+          ) {
+            toast.error("يجب اختيار المستودع");
+            return null;
+          }
+        } else {
+          if (
+            (!effectiveWarehouseId ||
+              effectiveWarehouseId === "undefined" ||
+              effectiveWarehouseId === "null") &&
+            salesSettings.default_warehouse_id
+          ) {
+            effectiveWarehouseId = salesSettings.default_warehouse_id;
+          }
+        }
+      } else {
+        if (
+          !effectiveWarehouseId ||
+          effectiveWarehouseId === "undefined" ||
+          effectiveWarehouseId === "null"
+        ) {
+          toast.error("الرجاء اختيار المستودع");
+          return null;
+        }
+      }
+      if (
+        !effectiveWarehouseId ||
+        effectiveWarehouseId === "undefined" ||
+        effectiveWarehouseId === "null"
+      ) {
+        toast.error("الرجاء اختيار المستودع");
+        return null;
+      }
+      const selectedCustomer = customers.find((item) => item.id === effectiveCustomerId);
+      const customerIdRaw = (selectedCustomer?.id ?? effectiveCustomerId ?? "").trim();
       const customerIdArg =
         customerIdRaw && customerIdRaw !== "undefined" && customerIdRaw !== "null"
           ? customerIdRaw
           : null;
-      const warehouseRaw = (warehouse ?? "").trim();
-      if (!warehouseRaw || warehouseRaw === "undefined" || warehouseRaw === "null") {
-        toast.error("الرجاء اختيار المستودع");
-        return null;
-      }
-      const warehouseArg = warehouseRaw;
+      const warehouseArg = effectiveWarehouseId;
       const operationId = draftId ?? crypto.randomUUID();
       const args: Record<string, unknown> = {
         _id: operationId,

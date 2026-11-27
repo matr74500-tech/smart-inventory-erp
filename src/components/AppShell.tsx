@@ -214,8 +214,15 @@ export const NAV: {
     group: "الإعدادات",
   },
   {
+    to: "/settings_sales",
+    label: "إعدادات البيع الافتراضية",
+    icon: Settings,
+    roles: ["storekeeper"],
+    group: "الإعدادات",
+  },
+  {
     to: "/settings",
-    label: "الإعدادات",
+    label: "الإعدادات العامة",
     icon: Settings,
     roles: ["storekeeper"],
     group: "الإعدادات",

@@ -37,6 +37,7 @@ import { Route as Sales_repsRouteImport } from './routes/sales_reps'
 import { Route as Sales_settingsRouteImport } from './routes/sales_settings'
 import { Route as Scanner_settingsRouteImport } from './routes/scanner_settings'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as Settings_salesRouteImport } from './routes/settings_sales'
 import { Route as Share_settingsRouteImport } from './routes/share_settings'
 import { Route as StocktakeRouteImport } from './routes/stocktake'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
@@ -185,6 +186,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Settings_salesRoute = Settings_salesRouteImport.update({
+  id: '/settings_sales',
+  path: '/settings_sales',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Share_settingsRoute = Share_settingsRouteImport.update({
   id: '/share_settings',
   path: '/share_settings',
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/sales_settings': typeof Sales_settingsRoute
   '/scanner_settings': typeof Scanner_settingsRoute
   '/settings': typeof SettingsRoute
+  '/settings_sales': typeof Settings_salesRoute
   '/share_settings': typeof Share_settingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/sales_settings': typeof Sales_settingsRoute
   '/scanner_settings': typeof Scanner_settingsRoute
   '/settings': typeof SettingsRoute
+  '/settings_sales': typeof Settings_salesRoute
   '/share_settings': typeof Share_settingsRoute
   '/stocktake': typeof StocktakeRoute
   '/suppliers': typeof SuppliersRoute
@@ -681,6 +689,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings_sales': {
+      id: '/settings_sales'
+      path: '/settings_sales'
+      fullPath: '/settings_sales'
+      preLoaderRoute: typeof Settings_salesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/share_settings': {
