@@ -508,6 +508,8 @@ export interface RootRouteChildren {
   System_timezoneRoute: typeof System_timezoneRoute
   TransfersRoute: typeof TransfersRoute
   Ui_themeRoute: typeof Ui_themeRoute
+  Documents_reviewRoute: typeof Documents_reviewRoute
+  Settings_establishmentRoute: typeof Settings_establishmentRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -758,6 +760,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Ui_themeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documents_review': {
+      id: '/documents_review'
+      path: '/documents_review'
+      fullPath: '/documents_review'
+      preLoaderRoute: typeof Documents_reviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings_establishment': {
+      id: '/settings_establishment'
+      path: '/settings_establishment'
+      fullPath: '/settings_establishment'
+      preLoaderRoute: typeof Settings_establishmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -803,6 +819,8 @@ const rootRouteChildren: RootRouteChildren = {
   System_timezoneRoute: System_timezoneRoute,
   TransfersRoute: TransfersRoute,
   Ui_themeRoute: Ui_themeRoute,
+  Documents_reviewRoute: Documents_reviewRoute,
+  Settings_establishmentRoute: Settings_establishmentRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
