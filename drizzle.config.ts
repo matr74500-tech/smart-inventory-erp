@@ -1,10 +1,10 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  dialect: "postgresql",
   schema: "./drizzle/schema.ts",
-  out: "./drizzle/migrations",
+  out: "./drizzle",
+  dialect: "postgresql",
   dbCredentials: {
-    url: process.env.LOVABLE_DB_MIGRATION_URL ?? "",
+    url: "postgresql://postgres.lewfrrzbhwpsuuhtdow:admin777758043@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres",
   },
 });
