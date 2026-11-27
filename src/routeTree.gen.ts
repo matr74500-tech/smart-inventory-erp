@@ -228,6 +228,16 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Documents_reviewRoute = Documents_reviewRouteImport.update({
+  id: '/documents_review',
+  path: '/documents_review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Settings_establishmentRoute = Settings_establishmentRouteImport.update({
+  id: '/settings_establishment',
+  path: '/settings_establishment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
